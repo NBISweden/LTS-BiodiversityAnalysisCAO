@@ -1,0 +1,9 @@
+import pandas as pd
+
+configfile: "config/config.yml"
+
+# Read sample list
+samples = pd.read_csv(config["sample_list"], index_col=0)
+
+rule all:
+    """Workflow pseudo rule"""
