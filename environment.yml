@@ -1,0 +1,8 @@
+name: biodivcao
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - snakemake-minimal
+  - pandas
