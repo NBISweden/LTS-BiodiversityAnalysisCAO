@@ -1,2 +1,4 @@
 # configuration file for project
 sample_list: ""
+fastp:
+  complexity_threshold: 30
