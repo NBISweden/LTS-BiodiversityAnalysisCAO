@@ -5,6 +5,11 @@ import os
 configfile: "config/config.yml"
 
 
+localrules:
+    multiqc,
+    all,
+
+
 # Read sample list
 sample_df = pd.read_csv(config["sample_list"], index_col=0)
 samples = sample_df.to_dict(orient="index")
