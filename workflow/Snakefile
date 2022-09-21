@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 
 
 configfile: "config/config.yml"
@@ -24,7 +25,8 @@ rule fastp:
         R1="results/fastp/{sample}.fastp.R1.fastq.gz",
         R2="results/fastp/{sample}.fastp.R2.fastq.gz",
     log:
-        "logs/fastp/{sample}.fastp.log",
+        log="logs/fastp/{sample}.fastp.log",
+        json="logs/fastp/{sample}.fastp.json",
     input:
         R1=lambda wildcards: sorted(
             [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
@@ -52,7 +54,33 @@ rule fastp:
         cat {input.R2} > {params.tmpR2}
         fastp --thread {threads} -y -Y {params.complexity_threshold} \
             -i {params.tmpR1} -I {params.tmpR2} -o {params.outR1} \
-            -O {params.outR2} > {log} 2>&1
+            -O {params.outR2} -j {log.json} > {log.log} 2>&1
         mv {params.outR1} {output.R1}
         mv {params.outR2} {output.R2}
+        rm {params.tmpR1} {params.tmpR2}
+        """
+
+
+rule multiqc:
+    output:
+        "results/multiqc/multiqc.html",
+        dir("results/multiqc/multiqc_data"),
+    log:
+        "logs/multiqc/multiqc.log",
+    input:
+        fastp=expand("logs/fastp/{sample}.fastp.json", sample=samples.keys()),
+    conda:
+        "envs/multiqc.yml"
+    envmodules:
+        "bioinfo-tools",
+        "MultiQC/1.12",
+    params:
+        tmpdir="$TMPDIR/biodivcao",
+        outdir=lambda wildcards, output: os.path.dirname(output[0]),
+    shell:
+        """
+        mkdir -p {params.tmpdir}
+        cp {input} {params.tmpdir}
+        multiqc -o {params.tmpdir} -n multiqc > {log} 2>&1
+        mv {params.tmpdir}/multiqc* {params.outdir}
         """
