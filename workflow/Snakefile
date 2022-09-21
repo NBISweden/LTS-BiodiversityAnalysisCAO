@@ -64,7 +64,7 @@ rule fastp:
 rule multiqc:
     output:
         "results/multiqc/multiqc.html",
-        dir("results/multiqc/multiqc_data"),
+        directory("results/multiqc/multiqc_data"),
     log:
         "logs/multiqc/multiqc.log",
     input:
@@ -81,6 +81,6 @@ rule multiqc:
         """
         mkdir -p {params.tmpdir}
         cp {input} {params.tmpdir}
-        multiqc -o {params.tmpdir} -n multiqc > {log} 2>&1
-        mv {params.tmpdir}/multiqc* {params.outdir}
+        multiqc -f -o {params.outdir} -n multiqc.html {params.tmpdir} > {log} 2>&1
+        rm -rf {params.tmpdir}
         """
