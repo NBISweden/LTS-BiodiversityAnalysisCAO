@@ -5,7 +5,8 @@ configfile: "config/config.yml"
 
 
 # Read sample list
-samples = pd.read_csv(config["sample_list"], index_col=0)
+sample_df = pd.read_csv(config["sample_list"], index_col=0)
+samples = sample_df.to_dict(orient="index")
 
 
 rule all:
@@ -26,10 +27,10 @@ rule fastp:
         "logs/fastp/{sample}.fastp.log",
     input:
         R1=lambda wildcards: sorted(
-            [x.split(";") for x in samples[wildcards.sample]["fwd_libs"]]
+            [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
         ),
         R2=lambda wildcards: sorted(
-            [x.split(";") for x in samples[wildcards.sample]["rev_libs"]]
+            [x for x in samples[wildcards.sample]["rev_libs"].split(";")]
         ),
     envmodules:
         "bioinfo-tools",
