@@ -24,6 +24,40 @@ rule all:
             i=[1, 2],
         ),
 
+rule mapping:
+    output:
+        fwd="{out_folder}/results/mappings/{map_name}/{lib}_fwd.fastq",
+        rev="{out_folder}/results/mappings/{map_name}/{lib}_rev.fastq",
+        unp="{out_folder}/results/mappings/{map_name}/{lib}_unp.fastq",
+    log:
+        log="{out_folder}/results/mappings/{map_name}/log/run.log",
+        fastp_log="{out_folder}/results/mappings/{map_name}/log/fastp.log",
+        fastp_json="{out_folder}/results/mappings/{map_name}/log/fastp.log",
+        env="{out_folder}/results/mappings/{map_name}/log/run_env.yaml",
+        settings="{out_folder}/results/mappings/{map_name}/log/run_settings.yaml",
+    input:
+        R1=lambda wildcards: sorted(
+            [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
+        ),
+        R2=lambda wildcards: sorted(
+            [x for x in samples[wildcards.sample]["rev_libs"].split(";")]
+        ),
+    conda:
+        "envs/mapping.yml"
+    threads: 20
+    params:
+        temp_folder=config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$"))
+        complexity_threshold=config["fastp"]["complexity_threshold"],
+        sample_file = config["sample_list"]
+        out_folder = config["out_folder"]
+        reference = config['mappings'][wildcards.map_name]['reference']
+        mapper = config['mappings'][wildcards.map_name]['mapper']
+        ani_cutoff = config['mappings'][wildcards.map_name]['ani_cutoff']
+        min_len = config['mappings'][wildcards.map_name]['min_len']
+    shell:
+        """
+        python scripts/mapping.py {params.sample_file} {params.reference} {wildcards.map_name} {wildcards.out_folder} {params.temp_folder} {params.mapper} {params.ani_cutoff} {params.min_len} {threads} {lib}
+        """
 
 rule fastp:
     output:
