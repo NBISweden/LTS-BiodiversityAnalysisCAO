@@ -14,6 +14,10 @@ localrules:
 sample_df = pd.read_csv(config["sample_list"], index_col=0)
 samples = sample_df.to_dict(orient="index")
 
+# Read mapping list
+mapping_df = pd.read_csv(config["mappings_list"], index_col=0)
+mappings = mapping_df.to_dict(orient="index")
+
 
 rule all:
     """Workflow pseudo rule"""
@@ -24,17 +28,36 @@ rule all:
             i=[1, 2],
         ),
 
+rule indexing:
+    input : 
+        ref = lambda wildcards : mappings[wildcards.map_name]['reference']
+    output : 
+        idx = "{out_folder}/results/mappings/{map_name}/index"
+    log : 
+        log = "{out_folder}/results/mappings/{map_name}/log/index/run.log",
+        env="{out_folder}/results/mappings/{map_name}/log/index/run_env.yaml",
+        settings="{out_folder}/results/mappings/{map_name}/log/run_settings.yaml",
+    params : 
+        mappings_file = config["mappings_list"],
+        temp_folder = config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$")),
+    shell :
+        """
+        python workflow/scripts/indexing.py {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.map_name} {log.log} {log.env}
+        """    
+
+
+
 rule mapping:
     output:
-        fwd="{out_folder}/results/mappings/{map_name}/{lib}_fwd.fastq",
-        rev="{out_folder}/results/mappings/{map_name}/{lib}_rev.fastq",
-        unp="{out_folder}/results/mappings/{map_name}/{lib}_unp.fastq",
+        fwd="{out_folder}/results/mappings/{map_name}/{sample}_fwd.fastq",
+        rev="{out_folder}/results/mappings/{map_name}/{sample}_rev.fastq",
+        unp="{out_folder}/results/mappings/{map_name}/{sample}_unp.fastq",
     log:
-        log="{out_folder}/results/mappings/{map_name}/log/run.log",
-        fastp_log="{out_folder}/results/mappings/{map_name}/log/fastp.log",
-        fastp_json="{out_folder}/results/mappings/{map_name}/log/fastp.log",
-        env="{out_folder}/results/mappings/{map_name}/log/run_env.yaml",
-        settings="{out_folder}/results/mappings/{map_name}/log/run_settings.yaml",
+        log="{out_folder}/results/mappings/{map_name}/log/{sample}/run.log",
+        fastp_log="{out_folder}/results/mappings/{map_name}/log/{sample}/fastp.log",
+        fastp_json="{out_folder}/results/mappings/{map_name}/log/{sample}/fastp.json",
+        env="{out_folder}/results/mappings/{map_name}/log/{sample}/run_env.yaml",
+        settings="{out_folder}/results/mappings/{map_name}/log/{sample}/run_settings.yaml",
     input:
         R1=lambda wildcards: sorted(
             [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
@@ -46,17 +69,13 @@ rule mapping:
         "envs/mapping.yml"
     threads: 20
     params:
-        temp_folder=config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$"))
-        complexity_threshold=config["fastp"]["complexity_threshold"],
-        sample_file = config["sample_list"]
-        out_folder = config["out_folder"]
-        reference = config['mappings'][wildcards.map_name]['reference']
-        mapper = config['mappings'][wildcards.map_name]['mapper']
-        ani_cutoff = config['mappings'][wildcards.map_name]['ani_cutoff']
-        min_len = config['mappings'][wildcards.map_name]['min_len']
+        temp_folder = config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$")),
+        complexity_threshold = config["fastp"]["complexity_threshold"],
+        sample_file = config["sample_list"],
+        mappings_file = config["mappings_list"]
     shell:
         """
-        python scripts/mapping.py {params.sample_file} {params.reference} {wildcards.map_name} {wildcards.out_folder} {params.temp_folder} {params.mapper} {params.ani_cutoff} {params.min_len} {threads} {lib}
+        python workflow/scripts/mapping.py {params.sample_file} {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.sample} {wildcards.map_name}
         """
 
 rule fastp:

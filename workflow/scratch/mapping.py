@@ -11,8 +11,6 @@ from Bio import SeqIO
 import pandas
 import numpy
 from tempfile import mkdtemp
-from workflow.scripts.utils import title2log, freetxt_line
-
 ### This script is based in the mapping.py script from https://github.com/moritzbuck/0053_metasssnake2 commit 3ca68f087d7f0faa65c3400e14a9779cbb18b468
 
 
