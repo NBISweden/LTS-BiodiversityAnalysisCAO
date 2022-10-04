@@ -23,12 +23,15 @@ rule all:
     """Workflow pseudo rule"""
     input:
         expand(
-            "results/fastp/{sample}.fastp.R{i}.fastq.gz",
+            "{out_folder}/results/{mapping}/{sample}_fwd.fastq",
             sample=samples.keys(),
-            i=[1, 2],
+            mapping=mappings.keys(),
+            out_folder = config["out_folder"]
         ),
 
 rule indexing:
+    conda : 
+        "envs/mapping.yaml"
     input : 
         ref = lambda wildcards : mappings[wildcards.map_name]['reference']
     output : 
@@ -42,7 +45,7 @@ rule indexing:
         temp_folder = config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$")),
     shell :
         """
-        python workflow/scripts/indexing.py {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.map_name} {log.log} {log.env}
+        python workflow/scripts/indexing.py {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.map_name} {log.log}
         """    
 
 
@@ -59,6 +62,7 @@ rule mapping:
         env="{out_folder}/results/mappings/{map_name}/log/{sample}/run_env.yaml",
         settings="{out_folder}/results/mappings/{map_name}/log/{sample}/run_settings.yaml",
     input:
+        idx = "{out_folder}/results/mappings/{map_name}/index",
         R1=lambda wildcards: sorted(
             [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
         ),
@@ -66,7 +70,7 @@ rule mapping:
             [x for x in samples[wildcards.sample]["rev_libs"].split(";")]
         ),
     conda:
-        "envs/mapping.yml"
+        "envs/mapping.yaml"
     threads: 20
     params:
         temp_folder = config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$")),

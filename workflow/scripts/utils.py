@@ -1,3 +1,8 @@
+from datetime import datetime
+from math import floor, ceil
+from sys import stderr
+
+
 def title2log(title, logfile, llen = 90, also_stderr = True) :
     text_insert = "{title} started at : {time}".format(title = title, time = datetime.now())
     prefix = "="*floor((llen-2-len(text_insert))/2) + " "

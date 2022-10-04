@@ -12,3 +12,4 @@ dependencies:
   - pandas
   - bowtie2
   - fastp
+  - pyyaml
