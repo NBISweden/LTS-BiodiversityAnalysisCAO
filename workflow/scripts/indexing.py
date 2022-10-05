@@ -46,7 +46,7 @@ title2log("reference to temp_folder", logfile)
 
 shutil.copy(reference, pjoin(temp_folder, "ref.fna"))
 
-title2log("indexing {reference} to temp_folder", logfile)
+title2log(f"indexing {reference} to temp_folder", logfile)
 if method == "bwa-mem2":
     call(f"bwa-mem2 index -p {temp_folder}/index {temp_folder}/ref.fna >> {logfile}  2>&1", shell=True)
     with open(f"{temp_folder}/index", "w") as handle:

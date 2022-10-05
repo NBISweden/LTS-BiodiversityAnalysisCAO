@@ -43,10 +43,11 @@ rule indexing:
     params : 
         mappings_file = config["mappings_list"],
         temp_folder = config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$")),
+    threads : 24    
     shell :
         """
         python workflow/scripts/indexing.py {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.map_name} {log.log}
-        """    
+        """
 
 
 
@@ -71,7 +72,7 @@ rule mapping:
         ),
     conda:
         "envs/mapping.yaml"
-    threads: 20
+    threads: 24
     params:
         temp_folder = config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$")),
         complexity_threshold = config["fastp"]["complexity_threshold"],
@@ -79,7 +80,7 @@ rule mapping:
         mappings_file = config["mappings_list"]
     shell:
         """
-        python workflow/scripts/mapping.py {params.sample_file} {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.sample} {wildcards.map_name}
+        python workflow/scripts/mapping.py {params.sample_file} {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.sample} {wildcards.map_name} {log.log}
         """
 
 rule fastp:
