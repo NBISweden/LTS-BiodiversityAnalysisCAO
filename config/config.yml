@@ -1,4 +1,7 @@
 # configuration file for project
-sample_list: "DNA_samples.csv"
-fastp:
-  complexity_threshold: 30
+sample_list : "config/samples.csv"
+temp_folder : "/home/moritz/temp/LTS-BiodiversityAnalysisCAO_COI/"
+out_folder : "/home/moritz/data/LTS-BiodiversityAnalysisCAO_COI/"
+fastp :
+  complexity_threshold : 30
+mappings_list : "config/mappings.csv"

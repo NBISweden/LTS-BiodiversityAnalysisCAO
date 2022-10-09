@@ -1,0 +1,2 @@
+map_name,reference,method,ani_cutoff,min_len, complexity_threshold
+test_mapping,"/home/moritz/projects/mosaic/M002_EFICA/data/BOLD-clean_COI5P_Animalia-mapping_ref.fasta","bwa-mem2",95,80,30
