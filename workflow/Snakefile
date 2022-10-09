@@ -26,29 +26,31 @@ rule all:
             "{out_folder}/results/{mapping}/{sample}_fwd.fastq",
             sample=samples.keys(),
             mapping=mappings.keys(),
-            out_folder = config["out_folder"]
+            out_folder=config["out_folder"],
         ),
 
+
 rule indexing:
-    conda : 
+    conda:
         "envs/mapping.yaml"
-    input : 
-        ref = lambda wildcards : mappings[wildcards.map_name]['reference']
-    output : 
-        idx = "{out_folder}/results/mappings/{map_name}/index"
-    log : 
-        log = "{out_folder}/results/mappings/{map_name}/log/index/run.log",
+    input:
+        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
+    output:
+        idx="{out_folder}/results/mappings/{map_name}/index",
+    log:
+        log="{out_folder}/results/mappings/{map_name}/log/index/run.log",
         env="{out_folder}/results/mappings/{map_name}/log/index/run_env.yaml",
         settings="{out_folder}/results/mappings/{map_name}/log/run_settings.yaml",
-    params : 
-        mappings_file = config["mappings_list"],
-        temp_folder = config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$")),
-    threads : 24    
-    shell :
+    params:
+        mappings_file=config["mappings_list"],
+        temp_folder=config["temp_folder"]
+        if not config["temp_folder"].startswith("$")
+        else os.env(config["temp_folder"].rstrip("$")),
+    threads: 24
+    shell:
         """
         python workflow/scripts/indexing.py {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.map_name} {log.log}
         """
-
 
 
 rule mapping:
@@ -63,7 +65,7 @@ rule mapping:
         env="{out_folder}/results/mappings/{map_name}/log/{sample}/run_env.yaml",
         settings="{out_folder}/results/mappings/{map_name}/log/{sample}/run_settings.yaml",
     input:
-        idx = "{out_folder}/results/mappings/{map_name}/index",
+        idx="{out_folder}/results/mappings/{map_name}/index",
         R1=lambda wildcards: sorted(
             [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
         ),
@@ -74,14 +76,17 @@ rule mapping:
         "envs/mapping.yaml"
     threads: 24
     params:
-        temp_folder = config["temp_folder"] if not config["temp_folder"].startswith("$") else os.env(config["temp_folder"].rstrip("$")),
-        complexity_threshold = config["fastp"]["complexity_threshold"],
-        sample_file = config["sample_list"],
-        mappings_file = config["mappings_list"]
+        temp_folder=config["temp_folder"]
+        if not config["temp_folder"].startswith("$")
+        else os.env(config["temp_folder"].rstrip("$")),
+        complexity_threshold=config["fastp"]["complexity_threshold"],
+        sample_file=config["sample_list"],
+        mappings_file=config["mappings_list"],
     shell:
         """
         python workflow/scripts/mapping.py {params.sample_file} {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.sample} {wildcards.map_name} {log.log}
         """
+
 
 rule fastp:
     output:
