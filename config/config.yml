@@ -1,4 +1,4 @@
 # configuration file for project
-sample_list: ""
+sample_list: "DNA_samples.csv"
 fastp:
   complexity_threshold: 30
