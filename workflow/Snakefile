@@ -23,75 +23,19 @@ rule all:
     """Workflow pseudo rule"""
     input:
         expand(
-            "{out_folder}/results/{mapping}/{sample}_fwd.fastq",
-            sample=samples.keys(),
-            mapping=mappings.keys(),
+            "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_{seqtype}.fastq.gz",
             out_folder=config["out_folder"],
+            map_name=mappings.keys(),
+            mapper=config["mappers"],
+            sample=samples.keys(),
+            seqtype=["fwd", "rev", "unp"],
         ),
-
-
-rule indexing:
-    conda:
-        "envs/mapping.yaml"
-    input:
-        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
-    output:
-        idx="{out_folder}/results/mappings/{map_name}/index",
-    log:
-        log="{out_folder}/results/mappings/{map_name}/log/index/run.log",
-        env="{out_folder}/results/mappings/{map_name}/log/index/run_env.yaml",
-        settings="{out_folder}/results/mappings/{map_name}/log/run_settings.yaml",
-    params:
-        mappings_file=config["mappings_list"],
-        temp_folder=config["temp_folder"]
-        if not config["temp_folder"].startswith("$")
-        else os.env(config["temp_folder"].rstrip("$")),
-    threads: 24
-    shell:
-        """
-        python workflow/scripts/indexing.py {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.map_name} {log.log}
-        """
-
-
-rule mapping:
-    output:
-        fwd="{out_folder}/results/mappings/{map_name}/{sample}_fwd.fastq",
-        rev="{out_folder}/results/mappings/{map_name}/{sample}_rev.fastq",
-        unp="{out_folder}/results/mappings/{map_name}/{sample}_unp.fastq",
-    log:
-        log="{out_folder}/results/mappings/{map_name}/log/{sample}/run.log",
-        fastp_log="{out_folder}/results/mappings/{map_name}/log/{sample}/fastp.log",
-        fastp_json="{out_folder}/results/mappings/{map_name}/log/{sample}/fastp.json",
-        env="{out_folder}/results/mappings/{map_name}/log/{sample}/run_env.yaml",
-        settings="{out_folder}/results/mappings/{map_name}/log/{sample}/run_settings.yaml",
-    input:
-        idx="{out_folder}/results/mappings/{map_name}/index",
-        R1=lambda wildcards: sorted(
-            [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
-        ),
-        R2=lambda wildcards: sorted(
-            [x for x in samples[wildcards.sample]["rev_libs"].split(";")]
-        ),
-    conda:
-        "envs/mapping.yaml"
-    threads: 24
-    params:
-        temp_folder=config["temp_folder"]
-        if not config["temp_folder"].startswith("$")
-        else os.env(config["temp_folder"].rstrip("$")),
-        complexity_threshold=config["fastp"]["complexity_threshold"],
-        sample_file=config["sample_list"],
-        mappings_file=config["mappings_list"],
-    shell:
-        """
-        python workflow/scripts/mapping.py {params.sample_file} {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.sample} {wildcards.map_name} {log.log}
-        """
 
 
 rule fastp:
     output:
-        R1="results/fastp/{sample}.fastp.R1.fastq.gz",
-        R2="results/fastp/{sample}.fastp.R2.fastq.gz",
+        R1=temp("results/fastp/{sample}.fastp.R1.fastq.gz"),
+        R2=temp("results/fastp/{sample}.fastp.R2.fastq.gz"),
     log:
         log="logs/fastp/{sample}.fastp.log",
         json="logs/fastp/{sample}.fastp.json",
@@ -110,6 +54,8 @@ rule fastp:
     resources:
         runtime=60 * 10,
     threads: 10
+    group:
+        "group1"
     params:
         tmpR1="$TMPDIR/{sample}.R1.fastq.gz",
         tmpR2="$TMPDIR/{sample}.R2.fastq.gz",
@@ -150,5 +96,92 @@ rule multiqc:
         mkdir -p {params.tmpdir}
         cp {input} {params.tmpdir}
         multiqc -f -o {params.outdir} -n multiqc.html {params.tmpdir} > {log} 2>&1
+        rm -rf {params.tmpdir}
+        """
+
+
+rule bwa_index:
+    output:
+        idx="{out_folder}/results/mappings/{map_name}/bwa-mem2/index",
+    input:
+        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
+    log:
+        "{out_folder}/logs/mappings/{map_name}/bwa-mem2/index.log",
+    params:
+        tmpdir="$TMPDIR/{map_name}.bwa-mem2",
+    conda:
+        "envs/mapping.yaml"
+    envmodules:
+        "bioinfo-tools",
+        "bwa-mem2/2.2.1-20211213-edc703f",
+    resources:
+        runtime=60 * 10,
+    shell:
+        """
+        exec &>{log}
+        mkdir -p {params.tmpdir}
+        bwa-mem2 index -p {params.tmpdir}/index {input.ref}
+        mv {params.tmpdir}/index {output.idx}
+        rm -rf {params.tmpdir}
+        """
+
+
+rule bwa_mem2:
+    output:
+        bam="{out_folder}/results/mappings/{map_name}/bwa-mem2/{sample}.filtered.bam",
+    input:
+        R1=rules.fastp.output.R1,
+        R2=rules.fastp.output.R2,
+        idx=rules.bwa_index.output.idx,
+    log:
+        log="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run.log",
+        maplog="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/bwa.log",
+        coverm="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/coverm.log",
+        env="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run_env.yaml",
+        settings="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run_settings",
+    params:
+        tmpdir="$TMPDIR/{map_name}.bwa-mem2.{sample}",
+        ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
+        min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
+    conda:
+        "envs/mapping.yaml"
+    threads: config["bwa-mem2"]["threads"]
+    group:
+        "group1"
+    shell:
+        """
+        exec &>{log.log}
+        mkdir -p {params.tmpdir}
+
+        bwa-mem2 mem -t {threads} {input.idx} -o {params.tmpdir}/mapping.sam {input.R1} {input.R2} >{log.maplog} 2>&1 \
+            | samtools view -b -S -@ {threads} | samtools sort -@ {threads} -o {params.tmpdir}/mapping_pairs.bam -
+
+        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
+
+        conda env export > {log.env}
+        history | grep bwa-mem2 | grep -v grep > {log.settings}
+        """
+
+
+rule extract_reads:
+    output:
+        fwd="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_fwd.fastq.gz",
+        rev="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_rev.fastq.gz",
+        unp="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_unp.fastq.gz",
+    input:
+        bam="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.filtered.bam",
+    log:
+        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.extract_reads.log",
+    params:
+        tmpdir="$TMDIR/{map_name}.{mapper}.{sample}",
+        outdir=lambda wildcards, output: os.path.dirname(output.fwd),
+    threads: 4
+    shell:
+        """
+        exec >{log}
+        mkdir -p {params.tmpdir}
+        samtools fastq -@ {threads} {input.bam} -1 {params.tmpdir}/{wildcards.sample}_fwd.fastq -2 {params.tmpdir}/{wildcards.sample}_rev.fastq -s {params.tmpdir}/{wildcards.sample}_unp.fastq 2> {log}
+        gzip {params.tmpdir}/*.fastq
+        mv {params.tmpdir}/*.fastq.gz {params.outdir}
         rm -rf {params.tmpdir}
         """
