@@ -1,0 +1,2 @@
+sample_name,fwd_libs,rev_libs,lib_type
+testsample1,test/data/testsample1.R1.fastq.gz,test/data/testsample1.R2.fastq.gz,DNA
