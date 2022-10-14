@@ -120,6 +120,7 @@ rule bwa_index:
         "bwa-mem2/2.2.1-20211213-edc703f",
     resources:
         runtime=60 * 10,
+    threads: 10
     shell:
         """
         exec &>{log}
