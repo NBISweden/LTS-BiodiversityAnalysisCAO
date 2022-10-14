@@ -1,3 +1,2 @@
 map_name,reference,ani_cutoff,min_len
 test_mapping,test/data/BOLD-clean_COI5P_Animalia-mapping_ref.fasta,95,80
-test_coidb,test/data/coidb_220218.fasta,95,80
