@@ -34,11 +34,11 @@ rule all:
 
 rule fastp:
     output:
-        R1=temp("results/fastp/{sample}.fastp.R1.fastq.gz"),
-        R2=temp("results/fastp/{sample}.fastp.R2.fastq.gz"),
+        R1=temp("{out_folder}/results/fastp/{sample}.fastp.R1.fastq.gz"),
+        R2=temp("{out_folder}/results/fastp/{sample}.fastp.R2.fastq.gz"),
     log:
-        log="logs/fastp/{sample}.fastp.log",
-        json="logs/fastp/{sample}.fastp.json",
+        log="{out_folder}/logs/fastp/{sample}.fastp.log",
+        json="{out_folder}/logs/fastp/{sample}.fastp.json",
     input:
         R1=lambda wildcards: sorted(
             [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
@@ -102,13 +102,17 @@ rule multiqc:
 
 rule bwa_index:
     output:
-        idx="{out_folder}/results/mappings/{map_name}/bwa-mem2/index",
+        idx=expand(
+            "{{out_folder}}/results/mappings/{{map_name}}/bwa-mem2/index.{suff}",
+            suff=["0123", "amb", "ann", "pac", "bwt.2bit.64"],
+        ),
     input:
         ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
     log:
         "{out_folder}/logs/mappings/{map_name}/bwa-mem2/index.log",
     params:
         tmpdir="$TMPDIR/{map_name}.bwa-mem2",
+        outdir=lambda wildcards, output: os.path.dirname(output[0])
     conda:
         "envs/mapping.yaml"
     envmodules:
@@ -121,7 +125,7 @@ rule bwa_index:
         exec &>{log}
         mkdir -p {params.tmpdir}
         bwa-mem2 index -p {params.tmpdir}/index {input.ref}
-        mv {params.tmpdir}/index {output.idx}
+        mv {params.tmpdir}/index* {params.outdir}
         rm -rf {params.tmpdir}
         """
 
@@ -138,11 +142,11 @@ rule bwa_mem2:
         maplog="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/bwa.log",
         coverm="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/coverm.log",
         env="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run_env.yaml",
-        settings="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run_settings",
     params:
         tmpdir="$TMPDIR/{map_name}.bwa-mem2.{sample}",
         ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
+        idx = lambda wildcards, input: os.path.dirname(input.idx[0])+"/index"
     conda:
         "envs/mapping.yaml"
     threads: config["bwa-mem2"]["threads"]
@@ -152,14 +156,16 @@ rule bwa_mem2:
         """
         exec &>{log.log}
         mkdir -p {params.tmpdir}
+        sam_threads=$(({threads} - 1))
 
-        bwa-mem2 mem -t {threads} {input.idx} -o {params.tmpdir}/mapping.sam {input.R1} {input.R2} >{log.maplog} 2>&1 \
-            | samtools view -b -S -@ {threads} | samtools sort -@ {threads} -o {params.tmpdir}/mapping_pairs.bam -
+        bwa-mem2 mem -t {threads} {params.idx} -o {params.tmpdir}/mapping.sam {input.R1} {input.R2} >{log.maplog} 2>&1
+        samtools view -@ $sam_threads -b {params.tmpdir}/mapping.sam > {params.tmpdir}/mapping.bam
+        samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam {params.tmpdir}/mapping.bam
 
         coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
-
+        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
+        rm -rf {params.tmpdir}
         conda env export > {log.env}
-        history | grep bwa-mem2 | grep -v grep > {log.settings}
         """
 
 
@@ -173,8 +179,9 @@ rule extract_reads:
     log:
         "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.extract_reads.log",
     params:
-        tmpdir="$TMDIR/{map_name}.{mapper}.{sample}",
+        tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
         outdir=lambda wildcards, output: os.path.dirname(output.fwd),
+    conda: "envs/mapping.yaml"
     threads: 4
     shell:
         """
