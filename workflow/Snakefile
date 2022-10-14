@@ -112,7 +112,7 @@ rule bwa_index:
         "{out_folder}/logs/mappings/{map_name}/bwa-mem2/index.log",
     params:
         tmpdir="$TMPDIR/{map_name}.bwa-mem2",
-        outdir=lambda wildcards, output: os.path.dirname(output[0])
+        outdir=lambda wildcards, output: os.path.dirname(output[0]),
     conda:
         "envs/mapping.yaml"
     envmodules:
@@ -146,10 +146,12 @@ rule bwa_mem2:
         tmpdir="$TMPDIR/{map_name}.bwa-mem2.{sample}",
         ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
-        idx = lambda wildcards, input: os.path.dirname(input.idx[0])+"/index"
+        idx=lambda wildcards, input: os.path.dirname(input.idx[0]) + "/index",
     conda:
         "envs/mapping.yaml"
     threads: config["bwa-mem2"]["threads"]
+    resources:
+        runtime=60 * 24,
     group:
         "group1"
     shell:
@@ -181,7 +183,10 @@ rule extract_reads:
     params:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
         outdir=lambda wildcards, output: os.path.dirname(output.fwd),
-    conda: "envs/mapping.yaml"
+    conda:
+        "envs/mapping.yaml"
+    resources:
+        runtime=60 * 12,
     threads: 4
     shell:
         """
