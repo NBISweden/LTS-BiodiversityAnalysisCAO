@@ -4,6 +4,7 @@ temp_folder : "/home/moritz/temp/LTS-BiodiversityAnalysisCAO_COI/"
 out_folder : "/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO"
 mappers:
   - "bwa-mem2"
+  - "bowtie2"
 fastp :
   complexity_threshold : 30
 mappings_list : "config/mappings.csv"
@@ -11,3 +12,5 @@ mappings_list : "config/mappings.csv"
 bwa-mem2:
   threads: 10
 
+bowtie2:
+  threads: 10
