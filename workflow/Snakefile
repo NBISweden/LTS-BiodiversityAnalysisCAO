@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-
+from snakemake.utils import validate
 
 configfile: "config/config.yml"
 
@@ -212,7 +212,7 @@ rule bowtie2:
         idx=rules.bowtie2_index.output.idx,
     log:
         log="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/run.log",
-        maplog="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/bwa.log",
+        maplog="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/bowtie2.log",
         coverm="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/coverm.log",
         env="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/run_env.yaml",
     params:
