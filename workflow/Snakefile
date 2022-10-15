@@ -5,6 +5,9 @@ import os
 configfile: "config/config.yml"
 
 
+validate(config, "schemas/config.schema.yml")
+
+
 localrules:
     multiqc,
     all,
@@ -171,9 +174,12 @@ rule bwa_mem2:
         conda env export > {log.env}
         """
 
+
 rule bowtie2_index:
     output:
-        idx = expand("{{out_folder}}/results/mappings/{{map_name}}/bowtie2/index.{suff}.bt2l", suff=range(1,5),
+        idx=expand(
+            "{{out_folder}}/results/mappings/{{map_name}}/bowtie2/index.{suff}.bt2l",
+            suff=range(1, 5),
         ),
     input:
         ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
@@ -195,6 +201,7 @@ rule bowtie2_index:
         mv {params.tmpdir}/index* {params.outdir}
         rm -rf {params.tmpdir}
         """
+
 
 rule bowtie2:
     output:
@@ -235,6 +242,7 @@ rule bowtie2:
         rm -rf {params.tmpdir}
         conda env export > {log.env}
         """
+
 
 rule extract_reads:
     output:
