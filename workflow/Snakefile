@@ -2,6 +2,7 @@ import pandas as pd
 import os
 from snakemake.utils import validate
 
+
 configfile: "config/config.yml"
 
 
@@ -106,7 +107,7 @@ rule multiqc:
 rule bwa_index:
     output:
         idx=expand(
-            "{{out_folder}}/results/mappings/{{map_name}}/bwa-mem2/index.{suff}",
+            "{{out_folder}}/resources/{{map_name}}/bwa-mem2/index.{suff}",
             suff=["0123", "amb", "ann", "pac", "bwt.2bit.64"],
         ),
     input:
@@ -164,9 +165,8 @@ rule bwa_mem2:
         mkdir -p {params.tmpdir}
         sam_threads=$(({threads} - 1))
 
-        bwa-mem2 mem -t {threads} {params.idx} -o {params.tmpdir}/mapping.sam {input.R1} {input.R2} >{log.maplog} 2>&1
-        samtools view -@ $sam_threads -b {params.tmpdir}/mapping.sam > {params.tmpdir}/mapping.bam
-        samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam {params.tmpdir}/mapping.bam
+        bwa-mem2 mem -t {threads} {params.idx} {input.R1} {input.R2} 2>{log.maplog} \
+            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
 
         coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
         mv {params.tmpdir}/mapping_filtered.bam {output.bam}
@@ -178,7 +178,7 @@ rule bwa_mem2:
 rule bowtie2_index:
     output:
         idx=expand(
-            "{{out_folder}}/results/mappings/{{map_name}}/bowtie2/index.{suff}.bt2l",
+            "{{out_folder}}/resources/{{map_name}}/bowtie2/index.{suff}.bt2l",
             suff=range(1, 5),
         ),
     input:
@@ -233,8 +233,8 @@ rule bowtie2:
         mkdir -p {params.tmpdir}
         sam_threads=$(({threads} - 1))
 
-        bowtie2 --seed 42 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} >{log.maplog} 2>&1 \
-            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam}
+        bowtie2 --seed 42 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2>{log.maplog} \
+            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
 
         coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
         mv {params.tmpdir}/mapping_filtered.bam {output.bam}
