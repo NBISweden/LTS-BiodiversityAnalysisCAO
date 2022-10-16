@@ -34,7 +34,7 @@ rule all:
             sample=samples.keys(),
             seqtype=["fwd", "rev", "unp"],
         ),
-        "results/multiqc/multiqc.html",
+        expand("{out_folder}/results/multiqc/multiqc.html", out_folder=config["out_folder"])
 
 
 rule fastp:
@@ -82,19 +82,19 @@ rule fastp:
 
 rule multiqc:
     output:
-        "results/multiqc/multiqc.html",
-        directory("results/multiqc/multiqc_data"),
+        "{out_folder}/results/multiqc/multiqc.html",
+        directory("{out_folder}/results/multiqc/multiqc_data"),
     log:
-        "logs/multiqc/multiqc.log",
+        "{out_folder}/logs/multiqc/multiqc.log",
     input:
-        fastp=expand("logs/fastp/{sample}.fastp.json", sample=samples.keys()),
+        fastp=expand("{{out_folder}}/logs/fastp/{sample}.fastp.json", sample=samples.keys()),
     conda:
         "envs/multiqc.yml"
     envmodules:
         "bioinfo-tools",
         "MultiQC/1.12",
     params:
-        tmpdir="$TMPDIR/biodivcao",
+        tmpdir="$TMPDIR/biodivcao_multiqc",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
     shell:
         """
