@@ -42,6 +42,18 @@ properties:
       threads:
         type: integer
         description: "threads for bowtie2"
+  minimap2:
+    type: object
+    default:
+      threads: 10
+      split_num: 30
+    properties:
+      threads:
+        type: integer
+        description: "threads for minimap2"
+      split_num:
+        type: integer
+        description: "split index for every ~NUM input bases"
 
 required:
   - sample_list

@@ -14,3 +14,7 @@ bwa-mem2:
 
 bowtie2:
   threads: 10
+
+minimap2:
+  threads: 10
+  split_num: 30
