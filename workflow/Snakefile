@@ -34,7 +34,10 @@ rule all:
             sample=samples.keys(),
             seqtype=["fwd", "rev", "unp"],
         ),
-        expand("{out_folder}/results/multiqc/multiqc.html", out_folder=config["out_folder"])
+        expand(
+            "{out_folder}/results/multiqc/multiqc.html",
+            out_folder=config["out_folder"],
+        ),
 
 
 rule fastp:
@@ -87,7 +90,9 @@ rule multiqc:
     log:
         "{out_folder}/logs/multiqc/multiqc.log",
     input:
-        fastp=expand("{{out_folder}}/logs/fastp/{sample}.fastp.json", sample=samples.keys()),
+        fastp=expand(
+            "{{out_folder}}/logs/fastp/{sample}.fastp.json", sample=samples.keys()
+        ),
     conda:
         "envs/multiqc.yml"
     envmodules:
@@ -241,6 +246,30 @@ rule bowtie2:
         mv {params.tmpdir}/mapping_filtered.bam {output.bam}
         rm -rf {params.tmpdir}
         conda env export > {log.env}
+        """
+
+
+rule minimap2_index:
+    output:
+        idx="{out_folder}/resources/{map_name}/minimap2/index",
+    input:
+        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
+    log:
+        "{out_folder}/logs/mappings/{map_name}/minimap2/index.log",
+    threads: 6
+    params:
+        split_num=config["minimap2"]["split_num"],
+        tmpdir="$TMPDIR/{map_name}.minimap2",
+        outdir=lambda wildcards, output: os.path.dirname(output.idx),
+    conda:
+        "envs/mapping.yaml"
+    shell:
+        """
+        exec &>{log}
+        mkdir -p {params.tmpdir}
+        minimap2 -I {params.split_num}G -t {threads} -d {params.tmpdir}/index {input.ref}
+        mv {params.tmpdir}/* {params.outdir}
+        rm -rf {params.tmpdir}        
         """
 
 
