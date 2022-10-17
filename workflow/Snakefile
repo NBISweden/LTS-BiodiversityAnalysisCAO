@@ -276,6 +276,10 @@ rule minimap2_index:
 rule minimap2:
     output:
         bam="{out_folder}/results/mappings/{map_name}/minimap2/{sample}.filtered.bam",
+    input:
+        R1=rules.fastp.output.R1,
+        R2=rules.fastp.output.R2,
+        idx=rules.minimap2_index.output.idx,
 
 
 rule extract_reads:
