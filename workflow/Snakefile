@@ -273,6 +273,11 @@ rule minimap2_index:
         """
 
 
+rule minimap2:
+    output:
+        bam="{out_folder}/results/mappings/{map_name}/minimap2/{sample}.filtered.bam",
+
+
 rule extract_reads:
     output:
         fwd="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_fwd.fastq.gz",
