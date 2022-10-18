@@ -73,7 +73,7 @@ for ff, rr in zip(fwd_libs,rev_libs):
     unpigz -kc {rr} > {temp_folder}/rev.fastq 2>> {logfile}
     """, shell=True)
 
-call(f"fastp -y -l {min_len} -h /dev/null -j {out_folder}/fastp.json  --in1 {temp_folder}/fwd.fastq --in2 {temp_folder}/rev.fastq --out1 {temp_folder}/clean_fwd.fastq --out2 {temp_folder}/clean_rev.fastq -w {threads}  >> {logfile} 2>&1", shell= True)
+call(f"fastp -y {params.complexity_threshold} -l {min_len} -h /dev/null -j {out_folder}/fastp.json  --in1 {temp_folder}/fwd.fastq --in2 {temp_folder}/rev.fastq --out1 {temp_folder}/clean_fwd.fastq --out2 {temp_folder}/clean_rev.fastq -w {threads}  >> {logfile} 2>&1", shell= True)
 
 
 freetxt_line("Starting mappings", logfile)
