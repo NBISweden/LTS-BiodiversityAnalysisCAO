@@ -5,5 +5,3 @@ out_folder : "/home/moritz/data/LTS-BiodiversityAnalysisCAO_COI/"
 fastp :
   complexity_threshold : 30
 mappings_list : "config/mappings.csv"
-
-
