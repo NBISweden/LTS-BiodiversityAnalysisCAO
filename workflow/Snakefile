@@ -256,7 +256,7 @@ rule minimap2_index:
         ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
     log:
         "{out_folder}/logs/mappings/{map_name}/minimap2/index.log",
-    threads: 6
+    threads: config["minimap2"]["threads"]
     params:
         split_num=config["minimap2"]["split_num"],
         tmpdir="$TMPDIR/{map_name}.minimap2",
