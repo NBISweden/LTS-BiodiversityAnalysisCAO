@@ -263,6 +263,8 @@ rule minimap2_index:
         outdir=lambda wildcards, output: os.path.dirname(output.idx),
     conda:
         "envs/mapping.yaml"
+    resources:
+        runtime = 60 * 24
     shell:
         """
         exec &>{log}
@@ -302,7 +304,7 @@ rule minimap2:
         exec &>{log.log}
         mkdir -p {params.tmpdir}
         sam_threads=$(({threads} - 1))
-        
+
         minimap2 -x sr --MD -a -t {threads} {input.idx} {input.R1} {input.R2} 2> {log.maplog} \
             | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
 
@@ -311,6 +313,7 @@ rule minimap2:
         rm -rf {params.tmpdir}
         conda env export > {log.env}
         """
+
 
 rule extract_reads:
     output:
