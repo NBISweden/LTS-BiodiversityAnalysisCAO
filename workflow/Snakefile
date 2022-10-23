@@ -39,6 +39,15 @@ rule all:
             out_folder=config["out_folder"],
         ),
 
+rule gzip:
+    output:
+        "{f}.fastq.gz"
+    input:
+        "{f}.fastq"
+    shell:
+        """
+        gzip -c {input} > {output}
+        """
 
 rule fastp:
     output:
