@@ -38,6 +38,22 @@ rule all:
             "{out_folder}/results/multiqc/multiqc.html",
             out_folder=config["out_folder"],
         ),
+        expand(
+            "{out_folder}/results/mappings/{map_name}/map_qc.html",
+            out_folder=config["out_folder"],
+            map_name=mappings.keys(),
+        ),
+
+
+rule gzip:
+    output:
+        "{f}.fastq.gz",
+    input:
+        "{f}.fastq",
+    shell:
+        """
+        gzip -c {input} > {output}
+        """
 
 
 rule fastp:
@@ -150,7 +166,7 @@ rule bwa_mem2:
         idx=rules.bwa_index.output.idx,
     log:
         log="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run.log",
-        maplog="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/bwa.log",
+        maplog="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/{sample}.log",
         coverm="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/coverm.log",
         env="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run_env.yaml",
     params:
@@ -218,7 +234,7 @@ rule bowtie2:
         idx=rules.bowtie2_index.output.idx,
     log:
         log="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/run.log",
-        maplog="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/bowtie2.log",
+        maplog="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/{sample}.log",
         coverm="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/coverm.log",
         env="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/run_env.yaml",
     params:
@@ -264,7 +280,7 @@ rule minimap2_index:
     conda:
         "envs/mapping.yaml"
     resources:
-        runtime = 60 * 24
+        runtime=60 * 24,
     shell:
         """
         exec &>{log}
@@ -284,7 +300,7 @@ rule minimap2:
         idx=rules.minimap2_index.output.idx,
     log:
         log="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/run.log",
-        maplog="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/minimap2.log",
+        maplog="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/{sample}.log",
         coverm="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/coverm.log",
         env="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/run_env.yaml",
     params:
@@ -312,6 +328,52 @@ rule minimap2:
         mv {params.tmpdir}/mapping_filtered.bam {output.bam}
         rm -rf {params.tmpdir}
         conda env export > {log.env}
+        """
+
+
+rule samtools_stats:
+    output:
+        stats="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.stats",
+    input:
+        "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.filtered.bam",
+    log:
+        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.filtered.samtools.stats",
+    params:
+        tmp="$TMPDIR/{map_name}.{mapper}.{sample}.stats",
+    conda:
+        "envs/mapping.yaml"
+    shell:
+        """
+        exec &>{log}
+        samtools stats {input} > {params.tmp}
+        mv {params.tmp} {output.stats}
+        """
+
+
+rule map_qc:
+    output:
+        "{out_folder}/results/mappings/{map_name}/map_qc.html",
+    input:
+        expand(
+            "{{out_folder}}/results/mappings/{{map_name}}/{mapper}/{sample}.stats",
+            mapper=config["mappers"],
+            sample=samples.keys(),
+        ),
+    log:
+        "{out_folder}/logs/multiqc/map_qc/{map_name}.log",
+    conda:
+        "envs/multiqc.yml"
+    params:
+        input=lambda wildcards, input: "\n".join(input),
+        tmpdir="$TMPDIR/{map_name}.map_qc",
+        outdir=lambda wildcards, output: os.path.dirname(output[0]),
+    shell:
+        """
+        exec &>{log}
+        mkdir -p {params.tmpdir}
+        echo "{params.input}" > {params.tmpdir}/files
+        multiqc -f -o {params.outdir} -dd 1 -n map_qc -l {params.tmpdir}/files
+        rm -rf {params.tmpdir}
         """
 
 
