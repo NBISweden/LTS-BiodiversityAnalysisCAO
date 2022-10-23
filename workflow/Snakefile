@@ -264,7 +264,7 @@ rule minimap2_index:
     conda:
         "envs/mapping.yaml"
     resources:
-        runtime = 60 * 24
+        runtime=60 * 24,
     shell:
         """
         exec &>{log}
