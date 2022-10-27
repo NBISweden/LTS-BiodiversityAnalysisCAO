@@ -1,0 +1,7 @@
+name: sintax
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+dependencies:
+  - vsearch=2.21.2
