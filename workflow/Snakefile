@@ -403,3 +403,35 @@ rule extract_reads:
         mv {params.tmpdir}/*.fastq.gz {params.outdir}
         rm -rf {params.tmpdir}
         """
+
+
+rule sintax:
+    output:
+        "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
+    input:
+        seq=expand(
+            "{{out_folder}}/results/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
+            seqtype=["fwd", "rev", "unp"],
+        ),
+        db=config["sintax"]["db"]
+    log:
+        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.sintax.log",
+    params:
+        fastq = "$TMPDIR/{map_name}.{mapper}.{sample}/reads.fastq.gz",
+        tmpdir = "$TMPDIR/{map_name}.{mapper}.{sample}",
+        cutoff = config["sintax"]["cutoff"],
+        out = "$TMPDIR/{map_name}.{mapper}.{sample}/{sample}.sintax.tsv"
+    conda:
+        "envs/sintax.yml"
+    resources:
+        runtime = 60 * 10
+    threads: 1
+    shell:
+        """
+        exec &>{log}
+        mkdir -p {params.tmpdir}
+        cat {input} > {params.fastq}
+        vsearch --sintax {params.fastq} --db {input.db} --randseed 15 --sintax_cutoff {params.cutoff} --tabbedout {params.out} --threads {threads} --strand both > {log} 2>&1
+        mv {params.out} {output}
+        rm -rf {params.tmpdir}
+        """
