@@ -23,9 +23,9 @@ mapping_df = pd.read_csv(config["mappings_list"], index_col=0)
 mappings = mapping_df.to_dict(orient="index")
 
 
-rule all:
-    """Workflow pseudo rule"""
-    input:
+def all_output(wildcards):
+    output = []
+    output.extend(
         expand(
             "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_{seqtype}.fastq.gz",
             out_folder=config["out_folder"],
@@ -33,16 +33,38 @@ rule all:
             mapper=config["mappers"],
             sample=samples.keys(),
             seqtype=["fwd", "rev", "unp"],
-        ),
+        )
+    )
+    output.extend(
         expand(
             "{out_folder}/results/multiqc/multiqc.html",
             out_folder=config["out_folder"],
-        ),
+        )
+    )
+    output.extend(
         expand(
             "{out_folder}/results/mappings/{map_name}/map_qc.html",
             out_folder=config["out_folder"],
             map_name=mappings.keys(),
-        ),
+        )
+    )
+    if os.path.exists(config["sintax"]["db"]):
+        output.extend(
+            expand(
+                "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
+                out_folder=config["out_folder"],
+                map_name=mappings.keys(),
+                mapper=config["mappers"],
+                sample=samples.keys(),
+            )
+        )
+    return output
+
+
+rule all:
+    """Workflow pseudo rule"""
+    input:
+        all_output,
 
 
 rule gzip:
@@ -413,18 +435,18 @@ rule sintax:
             "{{out_folder}}/results/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
             seqtype=["fwd", "rev", "unp"],
         ),
-        db=config["sintax"]["db"]
+        db=config["sintax"]["db"],
     log:
         "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.sintax.log",
     params:
-        fastq = "$TMPDIR/{map_name}.{mapper}.{sample}/reads.fastq.gz",
-        tmpdir = "$TMPDIR/{map_name}.{mapper}.{sample}",
-        cutoff = config["sintax"]["cutoff"],
-        out = "$TMPDIR/{map_name}.{mapper}.{sample}/{sample}.sintax.tsv"
+        fastq="$TMPDIR/{map_name}.{mapper}.{sample}/reads.fastq.gz",
+        tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
+        cutoff=config["sintax"]["cutoff"],
+        out="$TMPDIR/{map_name}.{mapper}.{sample}/{sample}.sintax.tsv",
     conda:
         "envs/sintax.yml"
     resources:
-        runtime = 60 * 10
+        runtime=60 * 10,
     threads: 1
     shell:
         """
