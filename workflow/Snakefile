@@ -51,11 +51,12 @@ def all_output(wildcards):
     if os.path.exists(config["sintax"]["db"]):
         output.extend(
             expand(
-                "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
+                "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.{suff}",
                 out_folder=config["out_folder"],
                 map_name=mappings.keys(),
                 mapper=config["mappers"],
                 sample=samples.keys(),
+                suff=["parsed.krona.txt", "parsed.tsv"],
             )
         )
     return output
@@ -456,4 +457,23 @@ rule sintax:
         vsearch --sintax {params.fastq} --db {input.db} --randseed 15 --sintax_cutoff {params.cutoff} --tabbedout {params.out} --threads {threads} --strand both > {log} 2>&1
         mv {params.out} {output}
         rm -rf {params.tmpdir}
+        """
+
+
+rule parse_sintax:
+    output:
+        tsv="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.tsv",
+        krona=temp(
+            "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.krona.txt"
+        ),
+    input:
+        "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.tsv"
+    log:
+        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.parse_sintax.log",
+    params:
+        src="workflow/scripts/parse_sintax.py",
+        cutoff=config["sintax"]["cutoff"],
+    shell:
+        """
+        python {params.src} -c {params.cutoff} -k {output.krona} {input} > {output.tsv} 2>{log}
         """
