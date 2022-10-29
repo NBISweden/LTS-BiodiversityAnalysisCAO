@@ -411,6 +411,7 @@ rule extract_reads:
         "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.extract_reads.log",
     params:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
+        tmp_bam="$TMPDIR/{map_name}.{mapper}.{sample}/namesorted.bam",
         outdir=lambda wildcards, output: os.path.dirname(output.fwd),
     conda:
         "envs/mapping.yaml"
@@ -421,7 +422,8 @@ rule extract_reads:
         """
         exec &> {log}
         mkdir -p {params.tmpdir}
-        samtools fastq -@ {threads} {input.bam} -1 {params.tmpdir}/{wildcards.sample}_fwd.fastq -2 {params.tmpdir}/{wildcards.sample}_rev.fastq -s {params.tmpdir}/{wildcards.sample}_unp.fastq 2> {log}
+        samtools sort -n {input.bam} > {params.tmp_bam}
+        samtools fastq -@ {threads} {params.tmp_bam} -1 {params.tmpdir}/{wildcards.sample}_fwd.fastq -2 {params.tmpdir}/{wildcards.sample}_rev.fastq -s {params.tmpdir}/{wildcards.sample}_unp.fastq 2> {log}
         gzip {params.tmpdir}/*.fastq
         mv {params.tmpdir}/*.fastq.gz {params.outdir}
         rm -rf {params.tmpdir}
