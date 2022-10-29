@@ -38,6 +38,11 @@ def compair(lineage1, lineage2, conf1, conf2, ranks):
             return lineage2, conf2, len(matching)
 
 
+def write_krona(dataf, ranks, outfile):
+    krona_df = pd.DataFrame(dataf.loc[:, ranks].groupby(ranks).size()).reset_index()
+    krona_df.loc[:, [0] + ranks].to_csv(outfile, index=False, sep="\t", header=False)
+
+
 def main(args):
     rank_translator = {
         "k": "kingdom",
@@ -55,7 +60,11 @@ def main(args):
 
     with open(args.sintax_results, "r") as fhin:
         for line in fhin:
-            seqid, taxres, strand, taxlineage = line.rstrip().split("\t")
+            # For some reason sintax sometimes writes lines with only the seqid
+            try:
+                seqid, taxres, strand, taxlineage = line.rstrip().split("\t")
+            except ValueError:
+                continue
             lineage = {}
             taxnames = []
             for i, item in enumerate(taxres.split(",")):
@@ -77,6 +86,8 @@ def main(args):
             taxdict[seqid] = lineage
     dataf = pd.DataFrame(taxdict).T
     dataf.to_csv(sys.stdout, sep="\t")
+    if args.krona:
+        write_krona(dataf, ranks, args.krona)
 
 
 if __name__ == "__main__":
@@ -84,6 +95,9 @@ if __name__ == "__main__":
     parser.add_argument("sintax_results", type=str, help="Sintax output file")
     parser.add_argument(
         "-c", "--cutoff", type=float, help="Cutoff threshold (0.8)", default=0.8
+    )
+    parser.add_argument(
+        "-k", "--krona", type=str, help="Write krona compatible output to file"
     )
     args = parser.parse_args()
     main(args)
