@@ -12,6 +12,8 @@ validate(config, "schemas/config.schema.yml")
 localrules:
     multiqc,
     parse_sintax,
+    map_qc,
+    samtools_stats,
     krona,
     all,
 
