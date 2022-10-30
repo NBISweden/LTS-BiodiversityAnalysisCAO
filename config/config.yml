@@ -21,3 +21,4 @@ minimap2:
 
 sintax:
   cutoff: 0.8
+  db: "resources/sintax/coi_db_sintax_sp_220218.fasta"
