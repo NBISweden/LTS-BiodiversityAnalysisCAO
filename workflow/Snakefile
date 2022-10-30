@@ -462,13 +462,14 @@ rule sintax:
         "envs/sintax.yml"
     resources:
         runtime=60 * 10,
-    threads: 1
+        mem_mb=12000,
+    threads: 2
     shell:
         """
         exec &>{log}
         mkdir -p {params.tmpdir}
-        cat {input} > {params.fastq}
-        vsearch --sintax {params.fastq} --db {input.db} --randseed 15 --sintax_cutoff {params.cutoff} --tabbedout {params.out} --threads {threads} --strand both > {log} 2>&1
+        cat {input.seq} > {params.fastq}
+        vsearch --sintax {params.fastq} --db {input.db} --randseed 15 --sintax_cutoff {params.cutoff} --tabbedout {params.out} --threads 1 --strand both > {log} 2>&1
         mv {params.out} {output}
         rm -rf {params.tmpdir}
         """
