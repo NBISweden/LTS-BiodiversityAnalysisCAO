@@ -30,6 +30,38 @@ rule all:
         ),
 
 
+rule index_genome:
+    output:
+        expand(
+            "resources/genome_index/{{ref}}/{{ref}}.{suff}.bt2l",
+            suff=["1", "2", "3", "4", "rev.1", "rev.2"],
+        ),
+    input:
+        fasta=lambda wildcards: config["mappings"]["genomes"][wildcards.ref],
+    envmodules:
+        "bioinfo-tools",
+        "bowtie2/2.4.5",
+    conda:
+        "envs/mapping.yaml"
+    threads: 20
+    resources:
+        runtime=lambda wildcards: 48 * 60,
+        mem_mb=250000,
+    params:
+        tmpdir="$TMPDIR/{ref}",
+        outdir=lambda wildcards, output: os.path.dirname(output[0]),
+    shell:
+        """
+        mkdir -p {params.tmpdir}
+        cp {input} {params.tmpdir}/{wildcards.ref}
+
+        bowtie2-build --large-index {params.tmpdir}/{wildcards.ref} {wildcards.ref}
+
+        mv {params.tmpdir}/*.bt2l {params.outdir}
+        rm -r {params.tmpdir}
+        """
+
+
 rule indexing:
     conda:
         "envs/mapping.yaml"
