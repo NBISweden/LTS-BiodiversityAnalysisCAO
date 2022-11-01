@@ -2,9 +2,6 @@ name: testing
 
 on:
   workflow_dispatch:
-    branches:
-      - main
-      - dev
   pull_request:
     branches:
       - dev
