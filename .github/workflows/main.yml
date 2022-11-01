@@ -20,8 +20,6 @@ jobs:
       - uses: s-weigand/setup-conda@v1.1.1
       - name: Install the conda environment
         run: conda env update -n base -f environment.yml
-      - name: Lint
-        run: snakemake --lint
-      - name: Perform test run 
+      - name: Perform test run
         run: snakemake --profile test -c 4
   
