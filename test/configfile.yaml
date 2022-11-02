@@ -1,13 +1,13 @@
 # configuration file for project
-sample_list : "config/samples.csv"
-out_folder : "/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO"
+sample_list : "test/samples.csv"
+out_folder : "test"
 mappers:
   - "bwa-mem2"
   - "bowtie2"
   - "minimap2"
 fastp :
   complexity_threshold : 30
-mappings_list : "config/mappings.csv"
+mappings_list : "test/mappings.csv"
 
 bwa-mem2:
   threads: 10
@@ -17,4 +17,4 @@ bowtie2:
 
 minimap2:
   threads: 10
-  split_num: 4
+  split_nums: 4
