@@ -13,6 +13,16 @@ env:
   TMPDIR: /tmp
 
 jobs:
+  lint:
+    run-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Linting
+        uses: snakemake/snakemake-github-action@v1
+        with:
+          directory: "."
+          snakefile: "workflow/Snakefile"
+          args: "--lint"
   testrun:
     runs-on: ubuntu-latest
     steps:
