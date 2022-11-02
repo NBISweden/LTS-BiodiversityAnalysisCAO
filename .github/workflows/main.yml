@@ -27,10 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install Conda environment with Micromamba
+      - name: Install Conda environment with Micromamba and perform test run
         uses: mamba-org/provision-with-micromamba@main
         with:
           cache-env: true
-      - name: Perform test run
         run: snakemake --profile test -c 4
   
