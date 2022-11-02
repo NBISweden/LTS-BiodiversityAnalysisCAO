@@ -13,14 +13,13 @@ properties:
     description: "list of references and map params"
   mappers:
     type: array
-    description: "list of mapping tools to use "
+    description: "list of mapping tools to use"
+    default: ["bowtie2"]
     items:
       type: string
       enum: ["bowtie2", "bwa-mem2", "minimap2"]
   fastp:
     type: object
-    default:
-      complexity_threshold: 30
     properties:
       complexity_threshold:
         type: integer
@@ -28,32 +27,40 @@ properties:
         description: "complexity threshold for fastp"
   bwa-mem2:
     type: object
-    default:
-      threads: 10
     properties:
       threads:
         type: integer
         description: "threads for bwa-mem2"
+        default: 10
   bowtie2:
     type: object
-    default:
-      threads: 10
     properties:
       threads:
         type: integer
         description: "threads for bowtie2"
+        default: 10
   minimap2:
     type: object
-    default:
-      threads: 10
-      split_num: 30
     properties:
       threads:
         type: integer
         description: "threads for minimap2"
+        default: 10
       split_num:
         type: integer
         description: "split index for every ~NUM input bases"
+        default: 4
+  sintax:
+    type: object
+    properties:
+      cutoff:
+        type: number
+        description: "cutoff value for sintax"
+        default: 0.8
+      db:
+        type: string
+        description: "path to sintax database fasta file"
+        default: ""
 
 required:
   - sample_list

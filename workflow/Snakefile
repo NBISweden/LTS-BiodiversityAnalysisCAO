@@ -11,6 +11,10 @@ validate(config, "schemas/config.schema.yml")
 
 localrules:
     multiqc,
+    parse_sintax,
+    map_qc,
+    samtools_stats,
+    krona,
     all,
 
 
@@ -23,9 +27,9 @@ mapping_df = pd.read_csv(config["mappings_list"], index_col=0)
 mappings = mapping_df.to_dict(orient="index")
 
 
-rule all:
-    """Workflow pseudo rule"""
-    input:
+def all_output(wildcards):
+    output = []
+    output.extend(
         expand(
             "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_{seqtype}.fastq.gz",
             out_folder=config["out_folder"],
@@ -33,16 +37,47 @@ rule all:
             mapper=config["mappers"],
             sample=samples.keys(),
             seqtype=["fwd", "rev", "unp"],
-        ),
+        )
+    )
+    output.extend(
         expand(
             "{out_folder}/results/multiqc/multiqc.html",
             out_folder=config["out_folder"],
-        ),
+        )
+    )
+    output.extend(
         expand(
             "{out_folder}/results/mappings/{map_name}/map_qc.html",
             out_folder=config["out_folder"],
             map_name=mappings.keys(),
-        ),
+        )
+    )
+    if os.path.exists(config["sintax"]["db"]):
+        output.extend(
+            expand(
+                "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.{suff}",
+                out_folder=config["out_folder"],
+                map_name=mappings.keys(),
+                mapper=config["mappers"],
+                sample=samples.keys(),
+                suff=["parsed.krona.txt", "parsed.tsv"],
+            )
+        )
+        output.extend(
+            expand(
+                "{out_folder}/results/mappings/{map_name}/{mapper}/krona/krona.html",
+                out_folder=config["out_folder"],
+                map_name=mappings.keys(),
+                mapper=config["mappers"],
+            )
+        )
+    return output
+
+
+rule all:
+    """Workflow pseudo rule"""
+    input:
+        all_output,
 
 rule index_genome:
     output:
@@ -441,6 +476,7 @@ rule extract_reads:
         "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.extract_reads.log",
     params:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
+        tmp_bam="$TMPDIR/{map_name}.{mapper}.{sample}/namesorted.bam",
         outdir=lambda wildcards, output: os.path.dirname(output.fwd),
     conda:
         "envs/mapping.yaml"
@@ -451,8 +487,89 @@ rule extract_reads:
         """
         exec &> {log}
         mkdir -p {params.tmpdir}
-        samtools fastq -@ {threads} {input.bam} -1 {params.tmpdir}/{wildcards.sample}_fwd.fastq -2 {params.tmpdir}/{wildcards.sample}_rev.fastq -s {params.tmpdir}/{wildcards.sample}_unp.fastq 2> {log}
+        samtools sort -n {input.bam} > {params.tmp_bam}
+        samtools fastq -@ {threads} {params.tmp_bam} -1 {params.tmpdir}/{wildcards.sample}_fwd.fastq -2 {params.tmpdir}/{wildcards.sample}_rev.fastq -s {params.tmpdir}/{wildcards.sample}_unp.fastq 2> {log}
         gzip {params.tmpdir}/*.fastq
         mv {params.tmpdir}/*.fastq.gz {params.outdir}
         rm -rf {params.tmpdir}
+        """
+
+
+rule sintax:
+    output:
+        "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
+    input:
+        seq=expand(
+            "{{out_folder}}/results/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
+            seqtype=["fwd", "rev", "unp"],
+        ),
+        db=config["sintax"]["db"],
+    log:
+        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.sintax.log",
+    params:
+        fastq="$TMPDIR/{map_name}.{mapper}.{sample}/reads.fastq.gz",
+        tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
+        cutoff=config["sintax"]["cutoff"],
+        out="$TMPDIR/{map_name}.{mapper}.{sample}/{sample}.sintax.tsv",
+    conda:
+        "envs/sintax.yml"
+    resources:
+        runtime=60 * 10,
+        mem_mb=12000,
+    threads: 2
+    shell:
+        """
+        exec &>{log}
+        mkdir -p {params.tmpdir}
+        cat {input.seq} > {params.fastq}
+        vsearch --sintax {params.fastq} --db {input.db} --randseed 15 --sintax_cutoff {params.cutoff} --tabbedout {params.out} --threads 1 --strand both > {log} 2>&1
+        mv {params.out} {output}
+        rm -rf {params.tmpdir}
+        """
+
+
+rule parse_sintax:
+    output:
+        tsv="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.tsv",
+        krona=temp(
+            "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.krona.txt"
+        ),
+    input:
+        rules.sintax.output,
+    log:
+        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.parse_sintax.log",
+    params:
+        src="workflow/scripts/parse_sintax.py",
+        cutoff=config["sintax"]["cutoff"],
+    shell:
+        """
+        python {params.src} -c {params.cutoff} -k {output.krona} {input} > {output.tsv} 2>{log}
+        """
+
+
+def krona_input_string(wildcards):
+    input_string = []
+    for sample in samples.keys():
+        text = f"{wildcards.out_folder}/results/mappings/{wildcards.map_name}/{wildcards.mapper}/{sample}.sintax.parsed.krona.txt,{sample}"
+        input_string.append(text)
+    return " ".join(input_string)
+
+
+rule krona:
+    output:
+        "{out_folder}/results/mappings/{map_name}/{mapper}/krona/krona.html",
+    input:
+        expand(
+            "{{out_folder}}/results/mappings/{{map_name}}/{{mapper}}/{sample}.sintax.parsed.krona.txt",
+            sample=samples.keys(),
+        ),
+    log:
+        "{out_folder}/logs/mappings/{map_name}/{mapper}/krona.log",
+    conda:
+        "envs/krona.yml"
+    params:
+        input_string=krona_input_string,
+    shell:
+        """
+        ktImportText -o {output} {params.input_string} > {log} 2>&1
         """
