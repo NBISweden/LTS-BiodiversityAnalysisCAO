@@ -71,6 +71,18 @@ def all_output(wildcards):
                 mapper=config["mappers"],
             )
         )
+    genomerefs = []
+    for ref in config["mappings"]["genomes"].keys():
+        if os.path.exists(config["mappings"]["genomes"][ref]["fasta"]):
+            genomerefs.append(ref)
+    output.extend(
+        expand(
+            "{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}.filtered.bam",
+            out_folder=config["out_folder"],
+            ref=genomerefs,
+            sample=samples.keys(),
+        )
+    )
     return output
 
 
@@ -79,59 +91,6 @@ rule all:
     input:
         all_output,
 
-rule index_genome:
-    output:
-        expand(
-            "resources/genome_index/{{ref}}/{{ref}}.{suff}.bt2l",
-            suff=["1", "2", "3", "4", "rev.1", "rev.2"],
-        ),
-    input:
-        fasta=lambda wildcards: config["mappings"]["genomes"][wildcards.ref],
-    envmodules:
-        "bioinfo-tools",
-        "bowtie2/2.4.5",
-    conda:
-        "envs/mapping.yaml"
-    threads: 20
-    resources:
-        runtime=lambda wildcards: 48 * 60,
-        mem_mb=250000,
-    params:
-        tmpdir="$TMPDIR/{ref}",
-        outdir=lambda wildcards, output: os.path.dirname(output[0]),
-    shell:
-        """
-        mkdir -p {params.tmpdir}
-        cp {input} {params.tmpdir}/{wildcards.ref}
-
-        bowtie2-build --large-index {params.tmpdir}/{wildcards.ref} {wildcards.ref}
-
-        mv {params.tmpdir}/*.bt2l {params.outdir}
-        rm -r {params.tmpdir}
-        """
-
-
-rule indexing:
-    conda:
-        "envs/mapping.yaml"
-    input:
-        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
-    output:
-        idx="{out_folder}/results/mappings/{map_name}/index",
-    log:
-        log="{out_folder}/results/mappings/{map_name}/log/index/run.log",
-        env="{out_folder}/results/mappings/{map_name}/log/index/run_env.yaml",
-        settings="{out_folder}/results/mappings/{map_name}/log/run_settings.yaml",
-    params:
-        mappings_file=config["mappings_list"],
-        temp_folder=config["temp_folder"]
-        if not config["temp_folder"].startswith("$")
-        else os.env(config["temp_folder"].rstrip("$")),
-    threads: 24
-    shell:
-        """
-        python workflow/scripts/indexing.py {params.mappings_file} {wildcards.out_folder} {params.temp_folder} {threads} {wildcards.map_name} {log.log}
-        """
 
 rule gzip:
     output:
@@ -210,6 +169,79 @@ rule multiqc:
         mkdir -p {params.tmpdir}
         cp {input} {params.tmpdir}
         multiqc -f -o {params.outdir} -n multiqc.html {params.tmpdir} > {log} 2>&1
+        rm -rf {params.tmpdir}
+        """
+
+
+rule bowtie2_index_genome:
+    output:
+        expand(
+            "resources/genome_index/{{ref}}/{{ref}}.{suff}.bt2l",
+            suff=["1", "2", "3", "4", "rev.1", "rev.2"],
+        ),
+    input:
+        fasta=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["fasta"],
+    log:
+        "resources/logs/genome_mappings/{ref}/bowtie2/index.log",
+    envmodules:
+        "bioinfo-tools",
+        "bowtie2/2.4.5",
+    conda:
+        "envs/mapping.yaml"
+    threads: 20
+    resources:
+        runtime=lambda wildcards: 48 * 60,
+        mem_mb=250000,
+    params:
+        tmpdir="$TMPDIR/{ref}",
+        outdir=lambda wildcards, output: os.path.dirname(output[0]),
+    shell:
+        """
+        mkdir -p {params.tmpdir}
+        cp {input} {params.tmpdir}/{wildcards.ref}
+
+        bowtie2-build --large-index {params.tmpdir}/{wildcards.ref} {params.tmpdir}/{wildcards.ref} >{log} 2>&1
+
+        mv {params.tmpdir}/*.bt2l {params.outdir}
+        rm -r {params.tmpdir}
+        """
+
+
+rule bowtie2_map_genome:
+    output:
+        bam="{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}.filtered.bam",
+    input:
+        idx=rules.bowtie2_index_genome.output,
+        R1=rules.fastp.output.R1,
+        R2=rules.fastp.output.R2,
+    log:
+        log="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/run.log",
+        maplog="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.log",
+        coverm="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/coverm.log",
+    params:
+        idx="resources/genome_index/{ref}/{ref}",
+        tmpdir="$TMPDIR/{ref}.{sample}.bowtie2",
+        ani_cutoff=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "ani_cutoff"
+        ],
+        min_len=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "min_len"
+        ],
+    group:
+        "group1"
+    conda:
+        "envs/mapping.yaml"
+    threads: config["bowtie2"]["threads"]
+    shell:
+        """
+        exec &>{log.log}
+        mkdir -p {params.tmpdir}
+        sam_threads=$(({threads} - 1))
+        bowtie2 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2> {log.maplog} \
+            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
+
+        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
+        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
         rm -rf {params.tmpdir}
         """
 
