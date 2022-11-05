@@ -77,10 +77,11 @@ def all_output(wildcards):
             genomerefs.append(ref)
     output.extend(
         expand(
-            "{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}.filtered.bam",
+            "{out_folder}/results/genome_mappings/{ref}/{mapper}/{sample}.filtered.bam",
             out_folder=config["out_folder"],
             ref=genomerefs,
             sample=samples.keys(),
+            mapper=config["mappers"],
         )
     )
     return output
@@ -173,6 +174,80 @@ rule multiqc:
         """
 
 
+rule minimap2_index_genome:
+    output:
+        idx="resources/genome_index/{ref}/minimap2.index",
+    input:
+        fasta=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["fasta"],
+    log:
+        "resources/logs/genome_mappings/{ref}/minimap2/index.log",
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
+    conda:
+        "envs/mapping.yaml"
+    threads: config["minimap2"]["threads"]
+    params:
+        split_num=config["minimap2"]["split_num"],
+        tmpdir="$TMPDIR/{ref}.minimap2",
+        outdir=lambda wildcards, output: os.path.dirname(output.idx),
+    resources:
+        runtime=60 * 24,
+    shell:
+        """
+        exec &>{log}
+        mkdir -p {params.tmpdir}
+        minimap2 -I {params.split_num}G -t {threads} -d {params.tmpdir}/minimap2.index {input.fasta}
+        mv {params.tmpdir}/* {params.outdir}
+        rm -rf {params.tmpdir}        
+        """
+
+
+rule minimap2_map_genome:
+    output:
+        bam="{out_folder}/results/genome_mappings/{ref}/minimap2/{sample}.filtered.bam",
+    input:
+        R1=rules.fastp.output.R1,
+        R2=rules.fastp.output.R2,
+        idx=rules.minimap2_index_genome.output.idx,
+    log:
+        log="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/run.log",
+        maplog="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/{sample}.log",
+        coverm="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/coverm.log",
+        env="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/run_env.yaml",
+    params:
+        tmpdir="$TMPDIR/{ref}.{sample}.minimap2",
+        ani_cutoff=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "ani_cutoff"
+        ],
+        min_len=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "min_len"
+        ],
+    conda:
+        "envs/mapping.yaml"
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
+    threads: config["minimap2"]["threads"]
+    resources:
+        runtime=60 * 24,
+    group:
+        "group1"
+    shell:
+        """
+        exec &>{log.log}
+        mkdir -p {params.tmpdir}
+        sam_threads=$(({threads} - 1))
+
+        minimap2 -x sr --MD -a -t {threads} {input.idx} {input.R1} {input.R2} 2> {log.maplog} \
+            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
+
+        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
+        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
+        rm -rf {params.tmpdir}
+        """
+
+
 rule bowtie2_index_genome:
     output:
         expand(
@@ -193,14 +268,14 @@ rule bowtie2_index_genome:
         runtime=lambda wildcards: 48 * 60,
         mem_mb=250000,
     params:
-        tmpdir="$TMPDIR/{ref}",
+        tmpdir="$TMPDIR/{ref}.bowtie2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
     shell:
         """
         mkdir -p {params.tmpdir}
         cp {input} {params.tmpdir}/{wildcards.ref}
 
-        bowtie2-build --large-index {params.tmpdir}/{wildcards.ref} {params.tmpdir}/{wildcards.ref} >{log} 2>&1
+        bowtie2-build --seed 42 --large-index {params.tmpdir}/{wildcards.ref} {params.tmpdir}/{wildcards.ref} >{log} 2>&1
 
         mv {params.tmpdir}/*.bt2l {params.outdir}
         rm -r {params.tmpdir}
@@ -237,7 +312,7 @@ rule bowtie2_map_genome:
         exec &>{log.log}
         mkdir -p {params.tmpdir}
         sam_threads=$(({threads} - 1))
-        bowtie2 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2> {log.maplog} \
+        bowtie2 --seed 42 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2> {log.maplog} \
             | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
 
         coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
@@ -399,6 +474,9 @@ rule minimap2_index:
         outdir=lambda wildcards, output: os.path.dirname(output.idx),
     conda:
         "envs/mapping.yaml"
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
     resources:
         runtime=60 * 24,
     shell:
@@ -430,6 +508,9 @@ rule minimap2:
         idx=lambda wildcards, input: os.path.dirname(input.idx[0]) + "/index",
     conda:
         "envs/mapping.yaml"
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
     threads: config["minimap2"]["threads"]
     resources:
         runtime=60 * 24,

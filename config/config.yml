@@ -2,7 +2,6 @@
 sample_list : "config/samples.csv"
 out_folder : "/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO"
 mappers:
-  - "bwa-mem2"
   - "bowtie2"
   - "minimap2"
 fastp :
