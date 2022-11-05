@@ -9,6 +9,9 @@ configfile: "config/config.yml"
 validate(config, "schemas/config.schema.yml")
 
 
+include: "scripts/common.py"
+
+
 localrules:
     multiqc,
     parse_sintax,
@@ -27,53 +30,6 @@ mapping_df = pd.read_csv(config["mappings_list"], index_col=0)
 mappings = mapping_df.to_dict(orient="index")
 
 
-def all_output(wildcards):
-    output = []
-    output.extend(
-        expand(
-            "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_{seqtype}.fastq.gz",
-            out_folder=config["out_folder"],
-            map_name=mappings.keys(),
-            mapper=config["mappers"],
-            sample=samples.keys(),
-            seqtype=["fwd", "rev", "unp"],
-        )
-    )
-    output.extend(
-        expand(
-            "{out_folder}/results/multiqc/multiqc.html",
-            out_folder=config["out_folder"],
-        )
-    )
-    output.extend(
-        expand(
-            "{out_folder}/results/mappings/{map_name}/map_qc.html",
-            out_folder=config["out_folder"],
-            map_name=mappings.keys(),
-        )
-    )
-    if os.path.exists(config["sintax"]["db"]):
-        output.extend(
-            expand(
-                "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.{suff}",
-                out_folder=config["out_folder"],
-                map_name=mappings.keys(),
-                mapper=config["mappers"],
-                sample=samples.keys(),
-                suff=["parsed.krona.txt", "parsed.tsv"],
-            )
-        )
-        output.extend(
-            expand(
-                "{out_folder}/results/mappings/{map_name}/{mapper}/krona/krona.html",
-                out_folder=config["out_folder"],
-                map_name=mappings.keys(),
-                mapper=config["mappers"],
-            )
-        )
-    return output
-
-
 rule all:
     """Workflow pseudo rule"""
     input:
@@ -85,9 +41,13 @@ rule gzip:
         "{f}.fastq.gz",
     input:
         "{f}.fastq",
+    log:
+        "{f}.gzip.log",
+    container:
+        "docker://snakemake/snakemake:latest"
     shell:
         """
-        gzip -c {input} > {output}
+        gzip -c {input} > {output} 2>{log}
         """
 
 
@@ -161,6 +121,153 @@ rule multiqc:
         """
 
 
+rule minimap2_index_genome:
+    output:
+        idx="resources/genome_index/{ref}/minimap2.index",
+    input:
+        fasta=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["fasta"],
+    log:
+        "resources/logs/genome_mappings/{ref}/minimap2/index.log",
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
+    conda:
+        "envs/mapping.yaml"
+    threads: config["minimap2"]["threads"]
+    params:
+        split_num=config["minimap2"]["split_num"],
+        tmpdir="$TMPDIR/{ref}.minimap2",
+        outdir=lambda wildcards, output: os.path.dirname(output.idx),
+    resources:
+        runtime=60 * 24,
+    shell:
+        """
+        exec &>{log}
+        mkdir -p {params.tmpdir}
+        minimap2 -I {params.split_num}G -t {threads} -d {params.tmpdir}/minimap2.index {input.fasta}
+        mv {params.tmpdir}/* {params.outdir}
+        rm -rf {params.tmpdir}        
+        """
+
+
+rule minimap2_map_genome:
+    output:
+        bam="{out_folder}/results/genome_mappings/{ref}/minimap2/{sample}.filtered.bam",
+    input:
+        R1=rules.fastp.output.R1,
+        R2=rules.fastp.output.R2,
+        idx=rules.minimap2_index_genome.output.idx,
+    log:
+        log="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/run.log",
+        maplog="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/{sample}.log",
+        coverm="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/coverm.log",
+        env="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/run_env.yaml",
+    params:
+        tmpdir="$TMPDIR/{ref}.{sample}.minimap2",
+        ani_cutoff=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "ani_cutoff"
+        ],
+        min_len=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "min_len"
+        ],
+    conda:
+        "envs/mapping.yaml"
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
+    threads: config["minimap2"]["threads"]
+    resources:
+        runtime=60 * 24,
+    group:
+        "group1"
+    shell:
+        """
+        exec &>{log.log}
+        mkdir -p {params.tmpdir}
+        sam_threads=$(({threads} - 1))
+
+        minimap2 -x sr --MD -a -t {threads} {input.idx} {input.R1} {input.R2} 2> {log.maplog} \
+            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
+
+        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
+        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
+        rm -rf {params.tmpdir}
+        """
+
+
+rule bowtie2_index_genome:
+    output:
+        expand(
+            "resources/genome_index/{{ref}}/{{ref}}.{suff}.bt2l",
+            suff=["1", "2", "3", "4", "rev.1", "rev.2"],
+        ),
+    input:
+        fasta=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["fasta"],
+    log:
+        "resources/logs/genome_mappings/{ref}/bowtie2/index.log",
+    envmodules:
+        "bioinfo-tools",
+        "bowtie2/2.4.5",
+    conda:
+        "envs/mapping.yaml"
+    threads: 20
+    resources:
+        runtime=lambda wildcards: 48 * 60,
+        mem_mb=250000,
+    params:
+        tmpdir="$TMPDIR/{ref}.bowtie2",
+        outdir=lambda wildcards, output: os.path.dirname(output[0]),
+    shell:
+        """
+        mkdir -p {params.tmpdir}
+        cp {input} {params.tmpdir}/{wildcards.ref}
+
+        bowtie2-build --seed 42 --large-index {params.tmpdir}/{wildcards.ref} {params.tmpdir}/{wildcards.ref} >{log} 2>&1
+
+        mv {params.tmpdir}/*.bt2l {params.outdir}
+        rm -r {params.tmpdir}
+        """
+
+
+rule bowtie2_map_genome:
+    output:
+        bam="{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}.filtered.bam",
+    input:
+        idx=rules.bowtie2_index_genome.output,
+        R1=rules.fastp.output.R1,
+        R2=rules.fastp.output.R2,
+    log:
+        log="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/run.log",
+        maplog="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.log",
+        coverm="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/coverm.log",
+    params:
+        idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0].replace(".1", ""),
+        tmpdir="$TMPDIR/{ref}.{sample}.bowtie2",
+        ani_cutoff=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "ani_cutoff"
+        ],
+        min_len=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "min_len"
+        ],
+    group:
+        "group1"
+    conda:
+        "envs/mapping.yaml"
+    threads: config["bowtie2"]["threads"]
+    shell:
+        """
+        exec &>{log.log}
+        mkdir -p {params.tmpdir}
+        sam_threads=$(({threads} - 1))
+        bowtie2 --seed 42 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2> {log.maplog} \
+            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
+
+        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
+        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
+        rm -rf {params.tmpdir}
+        """
+
+
 rule bwa_index:
     output:
         idx=expand(
@@ -208,7 +315,7 @@ rule bwa_mem2:
         tmpdir="$TMPDIR/{map_name}.bwa-mem2.{sample}",
         ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
-        idx=lambda wildcards, input: os.path.dirname(input.idx[0]) + "/index",
+        idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0],
     conda:
         "envs/mapping.yaml"
     threads: config["bwa-mem2"]["threads"]
@@ -276,7 +383,7 @@ rule bowtie2:
         tmpdir="$TMPDIR/{map_name}.bowtie2.{sample}",
         ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
-        idx=lambda wildcards, input: os.path.dirname(input.idx[0]) + "/index",
+        idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0].replace(".1", ""),
     conda:
         "envs/mapping.yaml"
     threads: config["bowtie2"]["threads"]
@@ -314,6 +421,9 @@ rule minimap2_index:
         outdir=lambda wildcards, output: os.path.dirname(output.idx),
     conda:
         "envs/mapping.yaml"
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
     resources:
         runtime=60 * 24,
     shell:
@@ -342,9 +452,11 @@ rule minimap2:
         tmpdir="$TMPDIR/{map_name}.minimap2.{sample}",
         ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
-        idx=lambda wildcards, input: os.path.dirname(input.idx[0]) + "/index",
     conda:
         "envs/mapping.yaml"
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
     threads: config["minimap2"]["threads"]
     resources:
         runtime=60 * 24,
@@ -488,18 +600,12 @@ rule parse_sintax:
     params:
         src="workflow/scripts/parse_sintax.py",
         cutoff=config["sintax"]["cutoff"],
+    container:
+        "docker://snakemake/snakemake:latest"
     shell:
         """
         python {params.src} -c {params.cutoff} -k {output.krona} {input} > {output.tsv} 2>{log}
         """
-
-
-def krona_input_string(wildcards):
-    input_string = []
-    for sample in samples.keys():
-        text = f"{wildcards.out_folder}/results/mappings/{wildcards.map_name}/{wildcards.mapper}/{sample}.sintax.parsed.krona.txt,{sample}"
-        input_string.append(text)
-    return " ".join(input_string)
 
 
 rule krona:

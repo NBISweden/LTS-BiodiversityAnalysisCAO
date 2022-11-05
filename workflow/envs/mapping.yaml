@@ -1,10 +1,11 @@
 name: mapping
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - bwa-mem2=2.2.1
   - samtools>=1.9
   - coverm=0.6.1
   - bowtie2=2.4.5
+  - minimap2=2.24

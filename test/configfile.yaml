@@ -2,12 +2,17 @@
 sample_list : "test/samples.csv"
 out_folder : "test"
 mappers:
-  - "bwa-mem2"
   - "bowtie2"
   - "minimap2"
 fastp :
   complexity_threshold : 30
 mappings_list : "test/mappings.csv"
+mappings:
+  genomes:
+    genomes.subset:
+      fasta: "test/data/genomes.subset.fasta"
+      ani_cutoff: 95
+      min_len: 80
 
 bwa-mem2:
   threads: 10
