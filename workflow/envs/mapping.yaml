@@ -1,7 +1,7 @@
 name: mapping
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - bwa-mem2=2.2.1
