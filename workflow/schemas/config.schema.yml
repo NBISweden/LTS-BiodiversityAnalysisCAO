@@ -1,0 +1,67 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+
+description: snakemake configuration file
+
+type: object
+
+properties:
+  sample_list:
+    type: string
+    description: "list of samples with fastq paths"
+  mappings_list:
+    type: string
+    description: "list of references and map params"
+  mappers:
+    type: array
+    description: "list of mapping tools to use"
+    default: ["bowtie2"]
+    items:
+      type: string
+      enum: ["bowtie2", "bwa-mem2", "minimap2"]
+  fastp:
+    type: object
+    properties:
+      complexity_threshold:
+        type: integer
+        default: 30
+        description: "complexity threshold for fastp"
+  bwa-mem2:
+    type: object
+    properties:
+      threads:
+        type: integer
+        description: "threads for bwa-mem2"
+        default: 10
+  bowtie2:
+    type: object
+    properties:
+      threads:
+        type: integer
+        description: "threads for bowtie2"
+        default: 10
+  minimap2:
+    type: object
+    properties:
+      threads:
+        type: integer
+        description: "threads for minimap2"
+        default: 10
+      split_num:
+        type: integer
+        description: "split index for every ~NUM input bases"
+        default: 4
+  sintax:
+    type: object
+    properties:
+      cutoff:
+        type: number
+        description: "cutoff value for sintax"
+        default: 0.8
+      db:
+        type: string
+        description: "path to sintax database fasta file"
+        default: ""
+
+required:
+  - sample_list
+  - mappings_list

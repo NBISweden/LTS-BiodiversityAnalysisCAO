@@ -1,0 +1,9 @@
+keep-going: True
+reason: True
+rerun-triggers: "mtime"
+printshellcmds: True
+configfile: "test/configfile.yaml"
+use-conda: True
+conda-frontend: "mamba"
+cores: 1
+default-resource: "tmpdir='/tmp'"

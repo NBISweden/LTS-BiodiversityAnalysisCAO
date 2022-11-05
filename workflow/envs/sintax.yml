@@ -1,7 +1,7 @@
-name: fastp
+name: sintax
 channels:
-  - defaults
   - conda-forge
+  - defaults
   - bioconda
 dependencies:
-  - fastp=0.23.2
+  - vsearch=2.21.2

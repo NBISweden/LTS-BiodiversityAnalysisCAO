@@ -4,12 +4,8 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - bwa-mem2
-  - samtools
-  - biopython
-  - tqdm
-  - coverm
-  - pandas
-  - bowtie2
-  - fastp
-  - pyyaml
+  - bwa-mem2=2.2.1
+  - samtools>=1.9
+  - coverm=0.6.1
+  - bowtie2=2.4.5
+  - minimap2=2.24

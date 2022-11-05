@@ -1,7 +1,7 @@
-name: fastp
+name: krona
 channels:
   - defaults
   - conda-forge
   - bioconda
 dependencies:
-  - fastp=0.23.2
+  - krona=2.8.1
