@@ -1,0 +1,40 @@
+name: testing
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+  workflow_dispatch:
+    branches:
+      - '*'
+
+env:
+  TMPDIR: /tmp
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Linting
+        uses: snakemake/snakemake-github-action@v1
+        with:
+          directory: "."
+          snakefile: "workflow/Snakefile"
+          args: "--lint"
+  testrun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Conda environment with Micromamba
+        uses: mamba-org/provision-with-micromamba@main
+        with:
+          cache-env: true
+      - name: Test run
+        run: snakemake --profile test -c 4
+  
