@@ -460,8 +460,8 @@ rule minimap2:
     threads: config["minimap2"]["threads"]
     resources:
         runtime=60 * 24,
-    group:
-        "group1"
+    #group:
+    #    "group1"
     shell:
         """
         exec &>{log.log}
