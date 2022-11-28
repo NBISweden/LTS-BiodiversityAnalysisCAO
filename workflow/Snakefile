@@ -450,8 +450,8 @@ rule minimap2:
         env="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/run_env.yaml",
     params:
         tmpdir="$TMPDIR/{map_name}.minimap2.{sample}",
-        ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
-        min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
+        ani_cutoff=config["min_ani_cutoff"],
+        min_len=config["min_align_len"],
     conda:
         "envs/mapping.yaml"
     envmodules:
@@ -537,6 +537,8 @@ rule extract_reads:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
         tmp_bam="$TMPDIR/{map_name}.{mapper}.{sample}/namesorted.bam",
         outdir=lambda wildcards, output: os.path.dirname(output.fwd),
+        ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
+        min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
     conda:
         "envs/mapping.yaml"
     resources:
@@ -546,7 +548,8 @@ rule extract_reads:
         """
         exec &> {log}
         mkdir -p {params.tmpdir}
-        samtools sort -n {input.bam} > {params.tmp_bam}
+        coverm filter -b {input.bam} -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads}
+        samtools sort -n {params.tmpdir}/mapping_filtered.bam > {params.tmp_bam}
         samtools fastq -@ {threads} {params.tmp_bam} -1 {params.tmpdir}/{wildcards.sample}_fwd.fastq -2 {params.tmpdir}/{wildcards.sample}_rev.fastq -s {params.tmpdir}/{wildcards.sample}_unp.fastq 2> {log}
         gzip {params.tmpdir}/*.fastq
         mv {params.tmpdir}/*.fastq.gz {params.outdir}

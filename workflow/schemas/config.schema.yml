@@ -11,6 +11,14 @@ properties:
   mappings_list:
     type: string
     description: "list of references and map params"
+  min_ani_cutoff:
+    type: integer
+    description: "minimum ANI cutoff to use in first read filtering"
+    default: 80
+  min_align_len:
+    type: integer
+    description: "minimum aligned length to use in first read filtering"
+    default: 30
   mappers:
     type: array
     description: "list of mapping tools to use"
