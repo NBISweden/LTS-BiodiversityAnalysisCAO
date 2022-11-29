@@ -39,9 +39,13 @@ def compair(lineage1, lineage2, conf1, conf2, ranks):
 
 
 def write_krona(dataf, ranks, outfile):
-    krona_df = pd.DataFrame(dataf.loc[:, ranks].groupby(ranks).size()).reset_index()
-    krona_df.loc[:, [0] + ranks].to_csv(outfile, index=False, sep="\t", header=False)
-
+    if dataf.shape[0] == 0:
+        sys.stderr.write("No results\n")
+        with open(outfile, 'w') as fhout:
+            fhout.write("")
+    else:
+        krona_df = pd.DataFrame(dataf.loc[:, ranks].groupby(ranks).size()).reset_index()
+        krona_df.loc[:, [0] + ranks].to_csv(outfile, index=False, sep="\t", header=False)
 
 def main(args):
     rank_translator = {
