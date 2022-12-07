@@ -1,3 +1,2 @@
 map_name,reference,ani_cutoff,min_len
-test_mapping,"/home/moritz/projects/mosaic/M002_EFICA/data/BOLD-clean_COI5P_Animalia-mapping_ref.fasta",95,80
-test_coidb,"/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO/resources/coidb_220218/coidb_220218.fasta",95,80
+coidb,resources/coidb_220218/coidb_220218.fasta,90,80
