@@ -1,9 +1,7 @@
 # configuration file for project
 sample_list : "config/samples.csv"
 out_folder : "/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO"
-min_ani_cutoff: 80
 mappers:
-  - "bowtie2"
   - "minimap2"
 fastp :
   complexity_threshold : 30
