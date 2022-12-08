@@ -207,6 +207,7 @@ rule bowtie2_index_genome:
         "bowtie2/2.4.5",
     conda:
         "envs/mapping.yaml"
+    container: "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
     resources:
         runtime=lambda wildcards: 48 * 60,
@@ -228,7 +229,7 @@ rule bowtie2_index_genome:
 
 rule bowtie2_map_genome:
     output:
-        bam="{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}.filtered.bam",
+        bam=temp("{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}.filtered.bam"),
     input:
         idx=rules.bowtie2_index_genome.output,
         R1=rules.fastp.output.R1,
@@ -236,7 +237,6 @@ rule bowtie2_map_genome:
     log:
         log="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/run.log",
         maplog="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.log",
-        coverm="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/coverm.log",
     params:
         idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0].replace(".1", ""),
         tmpdir="$TMPDIR/{ref}.{sample}.bowtie2",
@@ -248,16 +248,18 @@ rule bowtie2_map_genome:
         ],
     conda:
         "envs/mapping.yaml"
+    envmodules:
+        "bioinfo-tools",
+        "bowtie2/2.4.5",
+    container: "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: config["bowtie2"]["threads"]
     shell:
         """
         exec &>{log.log}
         mkdir -p {params.tmpdir}
         bowtie2 --seed 42 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2> {log.maplog} \
-            | samtools view -b - | samtools sort -o {params.tmpdir}/mapping_pairs.bam
-
-        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
-        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
+            | samtools view -b - | samtools sort -o {params.tmpdir}/tmp.bam
+        mv {params.tmpdir}/tmp.bam {output.bam}
         rm -rf {params.tmpdir}
         """
 
