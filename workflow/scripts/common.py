@@ -10,6 +10,16 @@ def all_output(wildcards):
             seqtype=["fwd", "rev", "unp"],
         )
     )
+    # extend with fish mapping
+    output.extend(
+        expand(
+            "{out_folder}/results/genome_mappings/{ref}/counts/{sample}_{t}_counts.txt",
+            sample=samples.keys(),
+            t=["taxid","species"],
+            ref=config["mappings"]["genomes"].keys(),
+            out_folder=config["out_folder"],
+        )
+    )
     output.extend(
         expand(
             "{out_folder}/results/multiqc/multiqc.html",
