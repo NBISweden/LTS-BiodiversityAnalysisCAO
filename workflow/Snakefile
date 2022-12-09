@@ -13,6 +13,7 @@ include: "scripts/common.py"
 
 
 localrules:
+    parse_results,
     multiqc,
     parse_sintax,
     map_qc,
@@ -132,7 +133,7 @@ rule minimap2_index_genome:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     threads: config["minimap2"]["threads"]
     params:
         split_num=config["minimap2"]["split_num"],
@@ -171,7 +172,7 @@ rule minimap2_map_genome:
             "min_len"
         ],
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
@@ -191,6 +192,17 @@ rule minimap2_map_genome:
         rm -rf {params.tmpdir}
         """
 
+## GENOME MAPPING ##
+# Map CAO samples to the database of fish genomes. It first maps the reads,
+# filters the results then blasts the mapped reads against nt. The mapping and
+# blast results are filtered using taxon lineage info and a custom python script.
+# Only reads that have a blast hit to a rayfinned fish (actinopterygii) or
+# cartilagenous fish (chondrichthyes) are reported. Note that reads from a pair
+# are considered as 1 in the final results.
+
+# The pipeline requires the 'taxon_table.csv' to run. This file is produce when
+# running the database build pipeline and contains the taxon info for each
+# assembly contig.
 
 rule bowtie2_index_genome:
     output:
@@ -206,7 +218,7 @@ rule bowtie2_index_genome:
         "bioinfo-tools",
         "bowtie2/2.4.5",
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     container: "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
     resources:
@@ -229,7 +241,7 @@ rule bowtie2_index_genome:
 
 rule bowtie2_map_genome:
     output:
-        bam=temp("{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}.filtered.bam"),
+        bam=temp("{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}/{sample}.bam"),
     input:
         idx=rules.bowtie2_index_genome.output,
         R1=rules.fastp.output.R1,
@@ -247,10 +259,13 @@ rule bowtie2_map_genome:
             "min_len"
         ],
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
         "bowtie2/2.4.5",
+        "samtools/1.9"
+    resources:
+        runtime = 24 * 60
     container: "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: config["bowtie2"]["threads"]
     shell:
@@ -262,6 +277,95 @@ rule bowtie2_map_genome:
         mv {params.tmpdir}/tmp.bam {output.bam}
         rm -rf {params.tmpdir}
         """
+
+
+# Filter bamfile. The temporary sam file is used for parsing the results.
+rule filter_bam:
+    input:
+        rules.bowtie2_map_genome.output.bam
+    output:
+        bam="{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.bam",
+        sam=temp("{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam")
+    log:
+        "{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log"
+    conda:
+        "envs/mapping.yml"
+    params:
+        tmpdir="$TMPDIR/{ref}.{sample}",
+    resources:
+        runtime = 2 * 60
+    shell:
+        """
+        exec &>{log}
+        mkdir -p {params.tmpdir}
+        samtools view -b -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.bam {input[0]}
+        samtools view -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.sam {input[0]}
+        mv {params.tmpdir}/tmp.bam {output.bam}
+        mv {params.tmpdir}/tmp.sam {output.sam}
+        rm -rf {params.tmpdir}
+        """
+
+# Get mapped reads:
+rule get_reads:
+    input:
+        rules.filter_bam.output.bam
+    output:
+        "{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa"
+    conda:
+        "envs/mapping.yml"
+    resources:
+        runtime = 30
+    shell:
+        """
+        samtools fasta -n -o {output[0]} {input[0]}
+        """
+
+# Blast reads against nt
+rule blast_reads:
+    input:
+        rules.get_reads.output[0]
+    output:
+        "{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt"
+    params:
+        db=config["blast"]["db"],
+        evalue=config["blast"]["evalue"],
+        max_target=config["blast"]["max_target_seqs"]
+    threads: 10
+    envmodules:
+        "bioinfo-tools",
+        "blast/2.9.0+"
+    conda:
+        "envs/blast.yml"
+    resources:
+        runtime = 24 * 60
+    shell:
+        """
+        blastn -num_threads {threads} -query {input[0]} \
+        -db {params.db} -evalue {params.evalue} -max_target_seqs {params.max_target} -outfmt \
+        "6 qseqid sseqid pident length mismatch gapopen \
+        qstart qend sstart send evalue bitscore staxid salltitles" \
+        -out {output[0]}
+        """
+
+# Filter mapping result using blast results and
+# taxon lineage info. Report counts per species
+# and counts per taxon for each sample.
+
+rule parse_results:
+    input:
+        reads=rules.blast_reads.output[0],
+        sam=rules.filter_bam.output.sam,
+        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["taxon_table"]
+    output:
+        "{out_folder}/results/genome_mappings/{ref}/counts/{sample}_taxid_counts.txt",
+        "{out_folder}/results/genome_mappings/{ref}/counts/{sample}_species_counts.txt",
+    conda:
+        "envs/ete3.yml"
+    shell:
+        """
+        python3 workflow/scripts/filter_aln_and_blast_results.py {input.reads} {input.sam} {input.tax} {output[0]} {output[1]}
+        """
+
 
 
 rule bwa_index:
@@ -278,7 +382,7 @@ rule bwa_index:
         tmpdir="$TMPDIR/{map_name}.bwa-mem2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
         "bwa-mem2/2.2.1-20211213-edc703f",
@@ -313,7 +417,7 @@ rule bwa_mem2:
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
         idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0],
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     threads: config["bwa-mem2"]["threads"]
     resources:
         runtime=60 * 24,
@@ -345,7 +449,7 @@ rule bowtie2_index:
         tmpdir="$TMPDIR/{map_name}.bowtie2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     resources:
         runtime=60 * 10,
     threads: 4
@@ -377,7 +481,7 @@ rule bowtie2:
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
         idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0].replace(".1", ""),
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     threads: config["bowtie2"]["threads"]
     resources:
         runtime=60 * 24,
@@ -408,7 +512,7 @@ rule minimap2_index:
         tmpdir="$TMPDIR/{map_name}.minimap2",
         outdir=lambda wildcards, output: os.path.dirname(output.idx),
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
@@ -441,7 +545,7 @@ rule minimap2:
         ani_cutoff=config["min_ani_cutoff"],
         min_len=config["min_align_len"],
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
@@ -474,7 +578,7 @@ rule samtools_stats:
     params:
         tmp="$TMPDIR/{map_name}.{mapper}.{sample}.stats",
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     shell:
         """
         exec &>{log}
@@ -526,7 +630,7 @@ rule extract_reads:
         ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     resources:
         runtime=60 * 12,
     threads: 4
