@@ -10,8 +10,13 @@ mappings:
   genomes:
     target_species:
       fasta: "resources/genome_index/target_species/target_species.fasta"
-      ani_cutoff: 95
-      min_len: 80
+      taxon_table: "resources/genome_index/target_species/taxon_table.csv"
+
+blast:
+  db: "/sw/data/blast_databases/nt"
+  evalue: 1e-30
+  max_target_seqs: 200
+
 
 bwa-mem2:
   threads: 10

@@ -10,9 +10,13 @@ mappings_list : "test/mappings.csv"
 mappings:
   genomes:
     genomes.subset:
-      fasta: "test/data/genomes.subset.fasta"
-      ani_cutoff: 95
-      min_len: 80
+      fasta: "test/data/target_species.subset.fasta"
+      taxon_table: "test/data/taxon_table.subset.csv"
+
+blast:
+  db: "/sw/data/blast_databases/nt"
+  evalue: 1e-30
+  max_target_seqs: 200
 
 bwa-mem2:
   threads: 10
