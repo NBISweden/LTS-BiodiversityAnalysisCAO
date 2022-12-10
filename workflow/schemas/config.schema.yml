@@ -26,6 +26,23 @@ properties:
     items:
       type: string
       enum: ["bowtie2", "bwa-mem2", "minimap2"]
+  mappings:
+    type: object
+    description: "Mapping parameters including reference path and taxa table"
+  blast:
+    type: object
+    properties:
+      db:
+        type: string
+        description: "Path to blast database (excluding suffix)"
+      evalute:
+        type: number
+        default: 1e-30
+        description: "E-value to use in blast search"
+      max_target_seqs:
+        type: integer
+        default: 200
+        description: "Max target seqs to report for blast search"
   fastp:
     type: object
     properties:
