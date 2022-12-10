@@ -9,7 +9,7 @@ fastp :
 mappings_list : "test/mappings.csv"
 mappings:
   genomes:
-    genomes.subset:
+    target_species.subset:
       fasta: "test/data/target_species.subset.fasta"
       taxon_table: "test/data/taxon_table.subset.csv"
 
