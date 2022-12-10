@@ -249,6 +249,8 @@ rule blast_reads:
         rules.get_reads.output[0]
     output:
         "{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt"
+    log:
+        "{out_folder}/logs/blast_reads/{ref}/{sample}.log"
     params:
         db=config["blast"]["db"],
         evalue=config["blast"]["evalue"],
@@ -267,7 +269,7 @@ rule blast_reads:
         -db {params.db} -evalue {params.evalue} -max_target_seqs {params.max_target} -outfmt \
         "6 qseqid sseqid pident length mismatch gapopen \
         qstart qend sstart send evalue bitscore staxid salltitles" \
-        -out {output[0]}
+        -out {output[0]} >{log} 2>&1
         """
 
 # Filter mapping result using blast results and
@@ -282,11 +284,13 @@ rule parse_results:
     output:
         "{out_folder}/results/genome_mappings/{ref}/counts/{sample}_taxid_counts.txt",
         "{out_folder}/results/genome_mappings/{ref}/counts/{sample}_species_counts.txt",
+    log:
+        "{out_folder}/logs/blast_reads/{ref}/{sample}.parse_results.log"
     conda:
         "envs/ete3.yml"
     shell:
         """
-        python3 workflow/scripts/filter_aln_and_blast_results.py {input.reads} {input.sam} {input.tax} {output[0]} {output[1]}
+        python3 workflow/scripts/filter_aln_and_blast_results.py {input.reads} {input.sam} {input.tax} {output[0]} {output[1]} 2>{log}
         """
 
 
