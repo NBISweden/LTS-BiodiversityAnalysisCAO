@@ -33,6 +33,7 @@ def all_output(wildcards):
             map_name=mappings.keys(),
         )
     )
+    #TODO: Fail explicitly here if sintax database does not exist
     if os.path.exists(config["sintax"]["db"]):
         output.extend(
             expand(
@@ -52,19 +53,6 @@ def all_output(wildcards):
                 mapper=config["mappers"],
             )
         )
-    genomerefs = []
-    for ref in config["mappings"]["genomes"].keys():
-        if os.path.exists(config["mappings"]["genomes"][ref]["fasta"]):
-            genomerefs.append(ref)
-    output.extend(
-        expand(
-            "{out_folder}/results/genome_mappings/{ref}/{mapper}/{sample}.filtered.bam",
-            out_folder=config["out_folder"],
-            ref=genomerefs,
-            sample=samples.keys(),
-            mapper=config["mappers"],
-        )
-    )
     return output
 
 
