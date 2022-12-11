@@ -21,14 +21,15 @@ import csv
 import sys
 from ete3 import NCBITaxa
 
-ncbi = NCBITaxa()
-
 # Infiles/outfiles
 blast_result = sys.argv[1]
 samfile = sys.argv[2]
 taxon_table = sys.argv[3]
 tax_result = sys.argv[4]
 sp_result = sys.argv[5]
+taxdb = sys.argv[6]
+
+ncbi = NCBITaxa(dbfile=taxdb)
 
 
 # Taxids for rayfinned fish and sharks/rays group
