@@ -277,11 +277,22 @@ rule blast_reads:
 # taxon lineage info. Report counts per species
 # and counts per taxon for each sample.
 
+rule download_taxdump:
+    output:
+        "resources/taxonomy/taxonomy.sqlite"
+    conda:
+        "envs/ete3.yml"
+    shell:
+        """
+        python workflow/scripts/download_taxdump.py
+        """
+
 rule parse_results:
     input:
         reads=rules.blast_reads.output[0],
         sam=rules.filter_bam.output.sam,
-        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["taxon_table"]
+        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["taxon_table"],
+        taxdb=rules.download_taxdump.output[0]
     output:
         "{out_folder}/results/genome_mappings/{ref}/counts/{sample}_taxid_counts.txt",
         "{out_folder}/results/genome_mappings/{ref}/counts/{sample}_species_counts.txt",
@@ -291,7 +302,7 @@ rule parse_results:
         "envs/ete3.yml"
     shell:
         """
-        python3 workflow/scripts/filter_aln_and_blast_results.py {input.reads} {input.sam} {input.tax} {output[0]} {output[1]} 2>{log}
+        python3 workflow/scripts/filter_aln_and_blast_results.py {input.reads} {input.sam} {input.tax} {output[0]} {output[1]} {input.taxdb} 2>{log}
         """
 
 
