@@ -258,7 +258,8 @@ rule blast_reads:
     threads: 10
     envmodules:
         "bioinfo-tools",
-        "blast/2.9.0+"
+        "blast/2.9.0+",
+        "blast_databases"
     conda:
         "envs/blast.yml"
     resources:
