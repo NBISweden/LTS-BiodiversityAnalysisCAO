@@ -35,8 +35,8 @@ properties:
       db:
         type: string
         description: "Path to blast database (excluding suffix)"
-      evalute:
-        type: number
+      evalue:
+        type: string
         default: 1e-30
         description: "E-value to use in blast search"
       max_target_seqs:
