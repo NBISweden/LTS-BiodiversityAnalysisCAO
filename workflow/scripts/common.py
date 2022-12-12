@@ -46,7 +46,7 @@ def all_output(wildcards):
         )
         output.extend(
             expand(
-                "{results_dir}//mappings/{map_name}/{mapper}/krona/krona.html",
+                "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
                 results_dir=config["results_dir"],
                 map_name=mappings.keys(),
                 mapper=config["mappers"],
