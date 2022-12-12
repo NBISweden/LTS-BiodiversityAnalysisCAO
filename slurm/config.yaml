@@ -1,4 +1,5 @@
 rerun-triggers: "mtime"
+rerun-incomplete: True
 reason: "True"
 keep-going: "True"
 cluster-sidecar: "slurm-sidecar.py"
@@ -14,6 +15,7 @@ local-cores: 1
 latency-wait: "5"
 use-conda: "True"
 use-singularity: "False"
+use-envmodules: "True"
 jobs: "500"
 printshellcmds: "True"
 
