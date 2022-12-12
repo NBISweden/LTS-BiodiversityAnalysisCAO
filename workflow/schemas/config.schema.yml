@@ -5,6 +5,10 @@ description: snakemake configuration file
 type: object
 
 properties:
+  results_dir:
+    type: string
+    description: "results output directory"
+    default: "results"
   sample_list:
     type: string
     description: "list of samples with fastq paths"
