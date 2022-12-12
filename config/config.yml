@@ -22,10 +22,10 @@ bwa-mem2:
   threads: 10
 
 bowtie2:
-  threads: 10
+  threads: 8
 
 minimap2:
-  threads: 10
+  threads: 8
   split_num: 4
 
 sintax:
