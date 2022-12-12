@@ -1,17 +1,16 @@
 # configuration file for project
-sample_list : "test/samples.csv"
-out_folder : "test"
+sample_list : "samples.csv"
+results_dir: "testrun"
 mappers:
-  - "bowtie2"
   - "minimap2"
 fastp :
   complexity_threshold : 30
-mappings_list : "test/mappings.csv"
+mappings_list : "mappings.csv"
 mappings:
   genomes:
     target_species.subset:
-      fasta: "test/data/target_species.subset.fasta"
-      taxon_table: "test/data/taxon_table.subset.csv"
+      fasta: "data/target_species.subset.fasta"
+      taxon_table: "data/taxon_table.subset.csv"
 
 blast:
   db: "/sw/data/blast_databases/nt"

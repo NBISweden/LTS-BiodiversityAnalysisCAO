@@ -1,3 +1,3 @@
 sample_name,fwd_libs,rev_libs,lib_type
-sample1,test/data/sample1.R1.fastq.gz,test/data/sample1.R2.fastq.gz,DNA
-sample2,test/data/sample2.R1.fastq.gz,test/data/sample2.R2.fastq.gz,DNA
+sample1,data/sample1.R1.fastq.gz,data/sample1.R2.fastq.gz,DNA
+sample2,data/sample2.R1.fastq.gz,data/sample2.R2.fastq.gz,DNA
