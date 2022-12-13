@@ -55,6 +55,10 @@ def all_output(wildcards):
     return output
 
 
+def mem_allowed(wildcards, threads):
+    return max(threads * 6400, 6400)
+
+
 def krona_input_string(wildcards):
     input_string = []
     for sample in samples.keys():
