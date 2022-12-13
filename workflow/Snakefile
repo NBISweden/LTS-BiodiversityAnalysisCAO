@@ -73,7 +73,7 @@ rule fastp:
     group:
         "group1"
     resources:
-        time = "10:00:00"
+        runtime = "10:00:00"
     threads: 4
     params:
         tmpR1="$TMPDIR/{sample}.R1.fastq.gz",
@@ -151,7 +151,7 @@ rule bowtie2_index_genome:
     container: "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
     resources:
-        time = "2-00:00:00"
+        runtime = "2-00:00:00"
     params:
         tmpdir="$TMPDIR/{ref}.bowtie2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
@@ -189,7 +189,7 @@ rule bowtie2_map_genome:
     group:
         "group1"
     resources:
-        time = "10:00:00"
+        runtime = "10:00:00"
     container: "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: config["bowtie2"]["threads"]
     shell:
@@ -220,7 +220,7 @@ rule filter_bam:
     params:
         tmpdir="$TMPDIR/{ref}.{sample}",
     resources:
-        time = "2:00:00"
+        runtime = "2:00:00"
     shell:
         """
         exec &>{log}
@@ -246,7 +246,7 @@ rule get_reads:
         "bioinfo-tools",
         "samtools/1.9"
     resources:
-        time = "30:00"
+        runtime = "30:00"
     shell:
         """
         samtools fasta -n -o {output[0]} {input[0]} 2>{log}
@@ -272,7 +272,7 @@ rule blast_reads:
     conda:
         "envs/blast.yml"
     resources:
-        time = "1-00:00:00"
+        runtime = "1-00:00:00"
     shell:
         """
         blastn -num_threads {threads} -query {input[0]} \
@@ -335,7 +335,7 @@ rule bwa_index:
         "bioinfo-tools",
         "bwa-mem2/2.2.1-20211213-edc703f",
     resources:
-        time = "10:00:00"
+        runtime = "10:00:00"
     threads: 10
     shell:
         """
@@ -368,7 +368,7 @@ rule bwa_mem2:
         "envs/mapping.yml"
     threads: config["bwa-mem2"]["threads"]
     resources:
-        time = "1-00:00:00"
+        runtime = "1-00:00:00"
     shell:
         """
         exec &>{log.log}
@@ -399,7 +399,7 @@ rule bowtie2_index:
     conda:
         "envs/mapping.yml"
     resources:
-        time = "10:00:00"
+        runtime = "10:00:00"
     threads: 4
     shell:
         """
@@ -431,7 +431,7 @@ rule bowtie2:
         "envs/mapping.yml"
     threads: config["bowtie2"]["threads"]
     resources:
-        time = "1-00:00:00"
+        runtime = "1-00:00:00"
     shell:
         """
         exec &>{log.log}
@@ -463,7 +463,7 @@ rule minimap2_index:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
     resources:
-        time = "1-00:00:00"
+        runtime = "1-00:00:00"
     shell:
         """
         exec &>{log}
@@ -496,7 +496,7 @@ rule minimap2:
         "minimap2/2.24-r1122",
     threads: config["minimap2"]["threads"]
     resources:
-        time = "10:00:00"
+        runtime = "10:00:00"
     group:
         "group1"
     shell:
@@ -576,7 +576,7 @@ rule extract_reads:
     conda:
         "envs/mapping.yml"
     resources:
-        time = "12:00:00"
+        runtime = "12:00:00"
     threads: 4
     shell:
         """
@@ -610,7 +610,7 @@ rule run_sintax:
     conda:
         "envs/sintax.yml"
     resources:
-        time = "10:00:00"
+        runtime = "10:00:00"
     threads: 2
     shell:
         """
