@@ -12,6 +12,7 @@ cluster-status: "slurm-status.py"
 max-jobs-per-second: "10"
 max-status-checks-per-second: "10"
 local-cores: 20
+default-resources: "mem_mb=6400"
 cores: 20
 latency-wait: "5"
 use-conda: "True"
