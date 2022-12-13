@@ -73,8 +73,8 @@ rule fastp:
     group:
         "group1"
     resources:
-        runtime = "10:00:00"
-    threads: 4
+        runtime = "1:00:00"
+    threads: 20
     params:
         tmpR1="$TMPDIR/{sample}.R1.fastq.gz",
         tmpR2="$TMPDIR/{sample}.R2.fastq.gz",
@@ -189,7 +189,7 @@ rule bowtie2_map_genome:
     group:
         "group1"
     resources:
-        runtime = "10:00:00"
+        runtime = "4:00:00"
     container: "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
     shell:
@@ -496,7 +496,7 @@ rule minimap2:
         "minimap2/2.24-r1122",
     threads: 20
     resources:
-        runtime = "10:00:00"
+        runtime = "2:00:00"
     group:
         "group1"
     shell:
