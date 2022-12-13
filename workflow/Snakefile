@@ -76,6 +76,7 @@ rule fastp:
         "group1"
     resources:
         runtime=60,
+        mem_mb=mem_allowed,
     threads: 20
     params:
         tmpR1="$TMPDIR/{sample}.R1.fastq.gz",
@@ -113,6 +114,8 @@ rule multiqc:
     envmodules:
         "bioinfo-tools",
         "MultiQC/1.12",
+    resources:
+        mem_mb = mem_allowed,
     params:
         tmpdir="$TMPDIR/biodivcao_multiqc",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
@@ -158,6 +161,7 @@ rule bowtie2_index_genome:
     threads: 20
     resources:
         runtime=48 * 60,
+        mem_mb=mem_allowed,
     params:
         tmpdir="$TMPDIR/{ref}.bowtie2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
@@ -196,6 +200,7 @@ rule bowtie2_map_genome:
         "group1"
     resources:
         runtime=4 * 60,
+        mem_mb=mem_allowed,
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
@@ -512,6 +517,7 @@ rule minimap2:
     threads: 20
     resources:
         runtime=2 * 60,
+        mem_mb=mem_allowed,
     group:
         "group1"
     shell:
