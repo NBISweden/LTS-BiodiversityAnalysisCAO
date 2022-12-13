@@ -591,7 +591,7 @@ rule extract_reads:
         """
 
 
-rule sintax:
+rule run_sintax:
     output:
         "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
     input:
@@ -630,7 +630,7 @@ rule parse_sintax:
             "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.krona.txt"
         ),
     input:
-        rules.sintax.output,
+        rules.run_sintax.output,
     log:
         "{results_dir}/logs/mappings/{map_name}/{mapper}/{sample}.parse_sintax.log",
     params:
@@ -662,3 +662,8 @@ rule krona:
         """
         ktImportText -o {output} {params.input_string} > {log} 2>&1
         """
+
+rule sintax:
+    input:
+        expand("{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
+            results_dir = config["results_dir"], map_name = mappings.keys(), mapper=config["mappers"])
