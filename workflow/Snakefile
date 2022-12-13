@@ -197,7 +197,7 @@ rule bowtie2_map_genome:
     envmodules:
         "bioinfo-tools",
         "bowtie2/2.4.5",
-        "samtools/1.9",
+        "samtools/1.14",
     group:
         "group1"
     resources:
@@ -232,7 +232,7 @@ rule filter_bam:
         "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
-        "samtools/1.9",
+        "samtools/1.14",
     params:
         tmpdir="$TMPDIR/{ref}.{sample}",
     resources:
@@ -262,7 +262,7 @@ rule get_reads:
         "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
-        "samtools/1.9",
+        "samtools/1.14",
     resources:
         runtime=30,
     shell:
