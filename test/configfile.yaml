@@ -30,4 +30,4 @@ minimap2:
 sintax:
   threads: 1
   cutoff: 0.8
-  db: "test/data/sintaxdb.subset.fasta"
+  db: "data/sintaxdb.subset.fasta"
