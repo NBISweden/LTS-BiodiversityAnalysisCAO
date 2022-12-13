@@ -14,8 +14,10 @@ include: "scripts/common.py"
 
 localrules:
     parse_results,
+    gzip,
     multiqc,
     parse_sintax,
+    get_reads,
     map_qc,
     download_taxdump,
     samtools_stats,
@@ -115,7 +117,7 @@ rule multiqc:
         "bioinfo-tools",
         "MultiQC/1.12",
     resources:
-        mem_mb = mem_allowed,
+        mem_mb=mem_allowed,
     params:
         tmpdir="$TMPDIR/biodivcao_multiqc",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
@@ -235,6 +237,7 @@ rule filter_bam:
         tmpdir="$TMPDIR/{ref}.{sample}",
     resources:
         runtime=2 * 60,
+        mem_mb=mem_allowed,
     shell:
         """
         exec &>{log}
@@ -289,6 +292,7 @@ rule blast_reads:
         "envs/blast.yml"
     resources:
         runtime=24 * 60,
+        mem_mb=mem_allowed,
     shell:
         """
         blastn -num_threads {threads} -query {input[0]} \
@@ -336,73 +340,6 @@ rule parse_results:
         """
 
 
-rule bwa_index:
-    output:
-        idx=expand(
-            "resources/{{map_name}}/bwa-mem2/index.{suff}",
-            suff=["0123", "amb", "ann", "pac", "bwt.2bit.64"],
-        ),
-    input:
-        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
-    log:
-        "resources/{map_name}/bwa-mem2/index.log",
-    params:
-        tmpdir="$TMPDIR/{map_name}.bwa-mem2",
-        outdir=lambda wildcards, output: os.path.dirname(output[0]),
-    conda:
-        "envs/mapping.yml"
-    envmodules:
-        "bioinfo-tools",
-        "bwa-mem2/2.2.1-20211213-edc703f",
-    resources:
-        runtime=10 * 60,
-    threads: 10
-    shell:
-        """
-        exec &>{log}
-        mkdir -p {params.tmpdir}
-        bwa-mem2 index -p {params.tmpdir}/index {input.ref}
-        mv {params.tmpdir}/index* {params.outdir}
-        rm -rf {params.tmpdir}
-        """
-
-
-rule bwa_mem2:
-    output:
-        bam="{results_dir}/mappings/{map_name}/bwa-mem2/{sample}.filtered.bam",
-    input:
-        R1=rules.fastp.output.R1,
-        R2=rules.fastp.output.R2,
-        idx=rules.bwa_index.output.idx,
-    log:
-        log="{results_dir}/logs/mappings/{map_name}/bwa-mem2/{sample}/run.log",
-        maplog="{results_dir}/logs/mappings/{map_name}/bwa-mem2/{sample}/{sample}.log",
-        coverm="{results_dir}/logs/mappings/{map_name}/bwa-mem2/{sample}/coverm.log",
-        env="{results_dir}/logs/mappings/{map_name}/bwa-mem2/{sample}/run_env.yaml",
-    params:
-        tmpdir="$TMPDIR/{map_name}.bwa-mem2.{sample}",
-        ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
-        min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
-        idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0],
-    conda:
-        "envs/mapping.yml"
-    threads: config["bwa-mem2"]["threads"]
-    resources:
-        runtime=24 * 60,
-    shell:
-        """
-        exec &>{log.log}
-        mkdir -p {params.tmpdir}
-        bwa-mem2 mem -t {threads} {params.idx} {input.R1} {input.R2} 2>{log.maplog} \
-            | samtools view -b - | samtools sort -o {params.tmpdir}/mapping_pairs.bam
-
-        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
-        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
-        rm -rf {params.tmpdir}
-        conda env export > {log.env}
-        """
-
-
 rule bowtie2_index:
     output:
         idx=expand(
@@ -420,6 +357,7 @@ rule bowtie2_index:
         "envs/mapping.yml"
     resources:
         runtime=10 * 60,
+        mem_mb=mem_allowed,
     threads: 4
     shell:
         """
@@ -452,6 +390,7 @@ rule bowtie2:
     threads: config["bowtie2"]["threads"]
     resources:
         runtime=24 * 60,
+        mem_mb=mem_allowed,
     shell:
         """
         exec &>{log.log}
@@ -484,6 +423,7 @@ rule minimap2_index:
         "minimap2/2.24-r1122",
     resources:
         runtime=24 * 60,
+        mem_mb=mem_allowed,
     shell:
         """
         exec &>{log}
@@ -598,6 +538,7 @@ rule extract_reads:
         "envs/mapping.yml"
     resources:
         runtime=12 * 60,
+        mem_mb=mem_allowed,
     threads: 4
     shell:
         """
@@ -632,6 +573,7 @@ rule run_sintax:
         "envs/sintax.yml"
     resources:
         runtime=10 * 60,
+        mem_mb=mem_allowed,
     threads: 2
     shell:
         """
