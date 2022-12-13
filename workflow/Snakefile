@@ -191,7 +191,7 @@ rule bowtie2_map_genome:
     resources:
         time = "10:00:00"
     container: "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
-    threads: config["bowtie2"]["threads"]
+    threads: 20
     shell:
         """
         exec &>{log.log}
@@ -494,7 +494,7 @@ rule minimap2:
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
-    threads: config["minimap2"]["threads"]
+    threads: 20
     resources:
         time = "10:00:00"
     group:
