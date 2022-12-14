@@ -40,29 +40,39 @@ rule all:
     input:
         all_output,
 
+
 rule genome_map:
     input:
-        expand("{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
-        results_dir=config["results_dir"],
-        sample=samples.keys(),
-        ref=config["mappings"]["genomes"].keys(),)
+        expand(
+            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
+            results_dir=config["results_dir"],
+            sample=samples.keys(),
+            ref=config["mappings"]["genomes"].keys(),
+        ),
+
 
 rule genome_count:
     input:
-        expand("{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
+        expand(
+            "{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
             results_dir=config["results_dir"],
             sample=samples.keys(),
             t=["taxid", "species"],
-            ref=config["mappings"]["genomes"].keys(),)
+            ref=config["mappings"]["genomes"].keys(),
+        ),
+
 
 rule coi_map:
     input:
-        expand("{results_dir}/mappings/{map_name}/{mapper}/{sample}_{r}.fastq.gz",
-        results_dir=config["results_dir"],
-        map_name=mappings.keys(),
-        mapper = config["mappers"],
-        sample = samples.keys(),
-        r=["fwd","rev","unp"])
+        expand(
+            "{results_dir}/mappings/{map_name}/{mapper}/{sample}_{r}.fastq.gz",
+            results_dir=config["results_dir"],
+            map_name=mappings.keys(),
+            mapper=config["mappers"],
+            sample=samples.keys(),
+            r=["fwd", "rev", "unp"],
+        ),
+
 
 rule sintax:
     input:
@@ -350,7 +360,7 @@ rule download_taxdump:
     conda:
         "envs/ete3.yml"
     params:
-        src=srcdir("scripts/download_taxdump.py")
+        src=srcdir("scripts/download_taxdump.py"),
     shell:
         """
         python {params.src} 2>{log}
@@ -373,7 +383,7 @@ rule parse_results:
     conda:
         "envs/ete3.yml"
     params:
-        src = srcdir("scripts/filter_aln_and_blast_results.py")
+        src=srcdir("scripts/filter_aln_and_blast_results.py"),
     shell:
         """
         python {params.src} {input.reads} {input.sam} {input.tax} {output.taxid} {output.species} {input.taxdb} 2>{log}
@@ -391,7 +401,7 @@ rule collate_counts:
     log:
         "{results_dir}/logs/collate_counts/{ref}.{t}_counts.txt",
     params:
-        src = srcdir("scripts/collate_counts.py")
+        src=srcdir("scripts/collate_counts.py"),
     shell:
         """
         python {params.src} {input} {output.txt} --strip {wildcards.t}_counts.txt 2>{log}

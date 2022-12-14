@@ -16,23 +16,21 @@ def all_output(wildcards):
             "{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
             results_dir=config["results_dir"],
             sample=samples.keys(),
-            t=["taxid","species"],
+            t=["taxid", "species"],
             ref=config["mappings"]["genomes"].keys(),
         )
     )
     output.extend(
-        expand(
-            "{results_dir}/multiqc/multiqc.html", results_dir=config["results_dir"]
-        )
+        expand("{results_dir}/multiqc/multiqc.html", results_dir=config["results_dir"])
     )
     output.extend(
         expand(
             "{results_dir}/mappings/{map_name}/map_qc.html",
             map_name=mappings.keys(),
-            results_dir=config["results_dir"]
+            results_dir=config["results_dir"],
         )
     )
-    #TODO: Fail explicitly here if sintax database does not exist
+    # TODO: Fail explicitly here if sintax database does not exist
     if os.path.exists(config["sintax"]["db"]):
         output.extend(
             expand(
