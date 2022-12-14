@@ -36,5 +36,5 @@ jobs:
         with:
           cache-env: true
       - name: Test run
-        run: snakemake --profile test -c 4
+        run: snakemake --profile test -c 4 genome_map coi_map sintax
   
