@@ -1,6 +1,5 @@
 # configuration file for project
 sample_list : "samples.csv"
-results_dir: "testrun"
 mappers:
   - "minimap2"
 fastp :
