@@ -221,7 +221,7 @@ rule bowtie2_map_genome:
 # Filter bamfile. The temporary sam file is used for parsing the results.
 rule filter_bam:
     input:
-        rules.bowtie2_map_genome.output.bam,
+        bam=rules.bowtie2_map_genome.output.bam,
     output:
         bam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.bam",
         sam=temp(
@@ -243,8 +243,8 @@ rule filter_bam:
         """
         exec &>{log}
         mkdir -p {params.tmpdir}
-        samtools view -b -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.bam {input[0]}
-        samtools view -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.sam {input[0]}
+        samtools view -b -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.bam {input.bam}
+        samtools view -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.sam {input.bam}
         mv {params.tmpdir}/tmp.bam {output.bam}
         mv {params.tmpdir}/tmp.sam {output.sam}
         rm -rf {params.tmpdir}
@@ -254,9 +254,9 @@ rule filter_bam:
 # Get mapped reads:
 rule get_reads:
     input:
-        rules.filter_bam.output.bam,
+        bam=rules.filter_bam.output.bam,
     output:
-        "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
+        fa="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.get_reads.log",
     conda:
@@ -268,16 +268,16 @@ rule get_reads:
         runtime=30,
     shell:
         """
-        samtools fasta -n -o {output[0]} {input[0]} 2>{log}
+        samtools fasta -n -o {output.fa} {input.bam} 2>{log}
         """
 
 
 # Blast reads against nt
 rule blast_reads:
     input:
-        rules.get_reads.output[0],
+        fa=rules.get_reads.output[0],
     output:
-        "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt",
+        txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt",
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.log",
     params:
@@ -296,11 +296,11 @@ rule blast_reads:
         mem_mb=mem_allowed,
     shell:
         """
-        blastn -num_threads {threads} -query {input[0]} \
+        blastn -num_threads {threads} -query {input.fa} \
         -db {params.db} -evalue {params.evalue} -max_target_seqs {params.max_target} -outfmt \
         "6 qseqid sseqid pident length mismatch gapopen \
         qstart qend sstart send evalue bitscore staxid salltitles" \
-        -out {output[0]} >{log} 2>&1
+        -out {output.txt} >{log} 2>&1
         """
 
 
@@ -312,11 +312,13 @@ rule blast_reads:
 rule download_taxdump:
     output:
         "resources/taxonomy/taxonomy.sqlite",
+    log:
+        "resources/taxonomy/download_taxdump.log",
     conda:
         "envs/ete3.yml"
     shell:
         """
-        python workflow/scripts/download_taxdump.py
+        python workflow/scripts/download_taxdump.py 2>{log}
         """
 
 
@@ -329,29 +331,31 @@ rule parse_results:
         ],
         taxdb=rules.download_taxdump.output[0],
     output:
-        "{results_dir}/genome_mappings/{ref}/counts/{sample}_taxid_counts.txt",
-        "{results_dir}/genome_mappings/{ref}/counts/{sample}_species_counts.txt",
+        taxid="{results_dir}/genome_mappings/{ref}/counts/{sample}_taxid_counts.txt",
+        species="{results_dir}/genome_mappings/{ref}/counts/{sample}_species_counts.txt",
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
     conda:
         "envs/ete3.yml"
     shell:
         """
-        python3 workflow/scripts/filter_aln_and_blast_results.py {input.reads} {input.sam} {input.tax} {output[0]} {output[1]} {input.taxdb} 2>{log}
+        python3 workflow/scripts/filter_aln_and_blast_results.py {input.reads} {input.sam} {input.tax} {output.taxid} {output.species} {input.taxdb} 2>{log}
         """
 
 
 rule collate_counts:
     output:
-        "{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
+        txt="{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
     input:
         expand(
             "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_{{t}}_counts.txt",
             sample=samples.keys(),
         ),
+    log:
+        "{results_dir}/logs/collate_counts/{ref}.{t}_counts.txt",
     shell:
         """
-        python workflow/scripts/collate_counts.py {input} {output} --strip {wildcards.t}_counts.txt
+        python workflow/scripts/collate_counts.py {input} {output.txt} --strip {wildcards.t}_counts.txt 2>{log}
         """
 
 

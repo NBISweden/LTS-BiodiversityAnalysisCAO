@@ -12,9 +12,11 @@ properties:
   sample_list:
     type: string
     description: "list of samples with fastq paths"
+    default: "config/samples.csv"
   mappings_list:
     type: string
     description: "list of references and map params"
+    default: "config/mappings.csv"
   min_ani_cutoff:
     type: integer
     description: "minimum ANI cutoff to use in first read filtering"
@@ -35,6 +37,10 @@ properties:
     description: "Mapping parameters including reference path and taxa table"
   blast:
     type: object
+    default:
+      db: "/sw/data/blast_databases/nt"
+      evalue: 1e-30
+      max_target_seqs: 200
     properties:
       db:
         type: string
@@ -49,38 +55,41 @@ properties:
         description: "Max target seqs to report for blast search"
   fastp:
     type: object
+    default:
+      complexity_threshold: 30
     properties:
       complexity_threshold:
         type: integer
         default: 30
         description: "complexity threshold for fastp"
-  bwa-mem2:
-    type: object
-    properties:
-      threads:
-        type: integer
-        description: "threads for bwa-mem2"
-        default: 10
   bowtie2:
     type: object
+    default:
+      threads: 20
     properties:
       threads:
         type: integer
         description: "threads for bowtie2"
-        default: 10
+        default: 20
   minimap2:
     type: object
+    default:
+      threads: 20
+      split_num: 4
     properties:
       threads:
         type: integer
         description: "threads for minimap2"
-        default: 10
+        default: 20
       split_num:
         type: integer
         description: "split index for every ~NUM input bases"
         default: 4
+
   sintax:
     type: object
+    default:
+      cutoff: 0.8
     properties:
       cutoff:
         type: number
