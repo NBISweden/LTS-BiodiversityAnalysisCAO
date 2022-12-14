@@ -5,12 +5,26 @@ description: snakemake configuration file
 type: object
 
 properties:
+  results_dir:
+    type: string
+    description: "results output directory"
+    default: "results"
   sample_list:
     type: string
     description: "list of samples with fastq paths"
+    default: "config/samples.csv"
   mappings_list:
     type: string
     description: "list of references and map params"
+    default: "config/mappings.csv"
+  min_ani_cutoff:
+    type: integer
+    description: "minimum ANI cutoff to use in first read filtering"
+    default: 80
+  min_align_len:
+    type: integer
+    description: "minimum aligned length to use in first read filtering"
+    default: 30
   mappers:
     type: array
     description: "list of mapping tools to use"
@@ -18,40 +32,64 @@ properties:
     items:
       type: string
       enum: ["bowtie2", "bwa-mem2", "minimap2"]
+  mappings:
+    type: object
+    description: "Mapping parameters including reference path and taxa table"
+  blast:
+    type: object
+    default:
+      db: "/sw/data/blast_databases/nt"
+      evalue: 1e-30
+      max_target_seqs: 200
+    properties:
+      db:
+        type: string
+        description: "Path to blast database (excluding suffix)"
+      evalue:
+        type: string
+        default: 1e-30
+        description: "E-value to use in blast search"
+      max_target_seqs:
+        type: integer
+        default: 200
+        description: "Max target seqs to report for blast search"
   fastp:
     type: object
+    default:
+      complexity_threshold: 30
     properties:
       complexity_threshold:
         type: integer
         default: 30
         description: "complexity threshold for fastp"
-  bwa-mem2:
-    type: object
-    properties:
-      threads:
-        type: integer
-        description: "threads for bwa-mem2"
-        default: 10
   bowtie2:
     type: object
+    default:
+      threads: 20
     properties:
       threads:
         type: integer
         description: "threads for bowtie2"
-        default: 10
+        default: 20
   minimap2:
     type: object
+    default:
+      threads: 20
+      split_num: 4
     properties:
       threads:
         type: integer
         description: "threads for minimap2"
-        default: 10
+        default: 20
       split_num:
         type: integer
         description: "split index for every ~NUM input bases"
         default: 4
+
   sintax:
     type: object
+    default:
+      cutoff: 0.8
     properties:
       cutoff:
         type: number
