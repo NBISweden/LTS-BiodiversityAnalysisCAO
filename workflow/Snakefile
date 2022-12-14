@@ -20,6 +20,7 @@ localrules:
     get_reads,
     map_qc,
     download_taxdump,
+    collate_counts,
     samtools_stats,
     krona,
     all,
@@ -337,6 +338,20 @@ rule parse_results:
     shell:
         """
         python3 workflow/scripts/filter_aln_and_blast_results.py {input.reads} {input.sam} {input.tax} {output[0]} {output[1]} {input.taxdb} 2>{log}
+        """
+
+
+rule collate_counts:
+    output:
+        "{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
+    input:
+        expand(
+            "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_{{t}}_counts.txt",
+            sample=samples.keys(),
+        ),
+    shell:
+        """
+        python workflow/scripts/collate_counts.py {input} {output} --strip {wildcards.t}_counts.txt
         """
 
 

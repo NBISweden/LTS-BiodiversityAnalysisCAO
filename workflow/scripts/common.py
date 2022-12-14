@@ -13,7 +13,7 @@ def all_output(wildcards):
     # extend with fish mapping
     output.extend(
         expand(
-            "{results_dir}/genome_mappings/{ref}/counts/{sample}_{t}_counts.txt",
+            "{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
             results_dir=config["results_dir"],
             sample=samples.keys(),
             t=["taxid","species"],
