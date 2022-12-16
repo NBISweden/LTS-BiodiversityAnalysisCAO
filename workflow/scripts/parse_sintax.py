@@ -52,6 +52,7 @@ def write_krona(dataf, ranks, outfile):
 
 def main(args):
     rank_translator = {
+	"d": "division",
         "k": "kingdom",
         "p": "phylum",
         "c": "class",
@@ -60,7 +61,7 @@ def main(args):
         "g": "genus",
         "s": "species",
     }
-    ranks = ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
+    ranks = ["division", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
     taxdict = {}
     confdict = {}
     cutoff = args.cutoff
