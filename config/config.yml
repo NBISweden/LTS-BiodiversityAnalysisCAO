@@ -1,6 +1,6 @@
 # configuration file for project
-sample_list : "config/samples.csv"
-out_folder : "/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO"
+sample_list : "config/samples.DNA.csv"
+results_dir: "results"
 mappers:
   - "minimap2"
 fastp :
@@ -17,17 +17,15 @@ blast:
   evalue: 1e-30
   max_target_seqs: 200
 
-
-bwa-mem2:
-  threads: 10
-
 bowtie2:
-  threads: 10
+  threads: 20
 
 minimap2:
-  threads: 10
+  threads: 20
   split_num: 4
 
 sintax:
   cutoff: 0.8
-  db: "resources/sintax/coi_db_sintax_sp_220218.fasta"
+  ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
+  replace_ranks: ["domain=kingdom", "kingdom=phylum", "phylum=class", "class=order", "order=family", "family=genus", "genus=species", "species=bold_id"]
+  db: "resources/sintax/coi_db_sintax_sp_221216.fasta"

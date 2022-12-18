@@ -667,11 +667,13 @@ rule parse_sintax:
     params:
         src=srcdir("scripts/parse_sintax.py"),
         cutoff=config["sintax"]["cutoff"],
+        ranks=config["sintax"]["ranks"],
+        replace_ranks=config["sintax"]["replace_ranks"]
     container:
         "docker://snakemake/snakemake:latest"
     shell:
         """
-        python {params.src} -c {params.cutoff} -k {output.krona} {input} > {output.tsv} 2>{log}
+        python {params.src} {input} -c {params.cutoff} -k {output.krona} --ranks {params.ranks} --replace_ranks {params.replace_ranks} > {output.tsv} 2>{log}
         """
 
 
