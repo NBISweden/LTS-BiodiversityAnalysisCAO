@@ -2,23 +2,30 @@
 
 from argparse import ArgumentParser
 import pandas as pd
+import sys
 
 
-def write_reads(outfile, l):
+def write_reads(l, outfile, suffix=""):
     with open(outfile, "w") as fhout:
         for r in l:
-            fhout.write(f"^{r}\n")
+            fhout.write(f"^{r}{suffix}\n")
+
 
 def main(args):
     taxdf = pd.read_csv(args.tax, sep="\t", index_col=0)
+    sys.stderr.write(f"Read {taxdf.shape[0]} result lines from {args.tax}\n")
     # Get rank names
-    sp_hits = taxdf.loc[taxdf[args.rank].str.startswith("Unclassified")]
+    sp_hits = taxdf.loc[~taxdf[args.rank].str.startswith("Unclassified")]
+    sys.stderr.write(f"{len(sp_hits)} reads assigned at {args.rank}\n")
     queries = list(sp_hits.index)
     sp = sp_hits[args.rank].unique()
+    sys.stderr.write(f"{len(sp)} unique {args.rank}\n")
+    sys.stderr.write(f"Reading info from {args.dbinfo}\n")
     dbinfo = pd.read_csv(args.dbinfo, sep="\t", index_col=0)
     # Get database records
     records = dbinfo.loc[dbinfo[args.rank].isin(sp)].index
-    write_reads(records, args.refs_out)
+    sys.stderr.write(f"{len(records)} reference records matched\n")
+    write_reads(records, args.refs_out, suffix=";")
     write_reads(queries, args.queries_out)
 
 
