@@ -2,20 +2,25 @@ import pandas as pd
 import os
 from snakemake.utils import validate
 
-
-configfile: "config/config.yml"
-
-
 validate(config, "schemas/config.schema.yml")
+
+
+wildcard_constraints:
+    results_dir="\w+",
 
 
 include: "scripts/common.py"
 
 
 localrules:
+    parse_results,
+    gzip,
     multiqc,
     parse_sintax,
+    get_reads,
     map_qc,
+    download_taxdump,
+    collate_counts,
     samtools_stats,
     krona,
     all,
@@ -36,6 +41,49 @@ rule all:
         all_output,
 
 
+rule genome_map:
+    input:
+        expand(
+            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
+            results_dir=config["results_dir"],
+            sample=samples.keys(),
+            ref=config["mappings"]["genomes"].keys(),
+        ),
+
+
+rule genome_count:
+    input:
+        expand(
+            "{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
+            results_dir=config["results_dir"],
+            sample=samples.keys(),
+            t=["taxid", "species"],
+            ref=config["mappings"]["genomes"].keys(),
+        ),
+
+
+rule coi_map:
+    input:
+        expand(
+            "{results_dir}/mappings/{map_name}/{mapper}/{sample}_{r}.fastq.gz",
+            results_dir=config["results_dir"],
+            map_name=mappings.keys(),
+            mapper=config["mappers"],
+            sample=samples.keys(),
+            r=["fwd", "rev", "unp"],
+        ),
+
+
+rule sintax:
+    input:
+        expand(
+            "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
+            results_dir=config["results_dir"],
+            map_name=mappings.keys(),
+            mapper=config["mappers"],
+        ),
+
+
 rule gzip:
     output:
         "{f}.fastq.gz",
@@ -53,11 +101,11 @@ rule gzip:
 
 rule fastp:
     output:
-        R1=temp("{out_folder}/results/fastp/{sample}.fastp.R1.fastq.gz"),
-        R2=temp("{out_folder}/results/fastp/{sample}.fastp.R2.fastq.gz"),
+        R1=temp("{results_dir}/fastp/{sample}.fastp.R1.fastq.gz"),
+        R2=temp("{results_dir}/fastp/{sample}.fastp.R2.fastq.gz"),
     log:
-        log="{out_folder}/logs/fastp/{sample}.fastp.log",
-        json="{out_folder}/logs/fastp/{sample}.fastp.json",
+        log="{results_dir}/logs/fastp/{sample}.fastp.log",
+        json="{results_dir}/logs/fastp/{sample}.fastp.json",
     input:
         R1=lambda wildcards: sorted(
             [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
@@ -70,11 +118,12 @@ rule fastp:
         "fastp/0.23.2",
     conda:
         "envs/fastp.yml"
-    resources:
-        runtime=60 * 10,
-    threads: 10
     group:
         "group1"
+    resources:
+        runtime=60,
+        mem_mb=mem_allowed,
+    threads: 20
     params:
         tmpR1="$TMPDIR/{sample}.R1.fastq.gz",
         tmpR2="$TMPDIR/{sample}.R2.fastq.gz",
@@ -96,19 +145,23 @@ rule fastp:
 
 rule multiqc:
     output:
-        "{out_folder}/results/multiqc/multiqc.html",
-        directory("{out_folder}/results/multiqc/multiqc_data"),
+        "{results_dir}/multiqc/multiqc.html",
+        directory("{results_dir}/multiqc/multiqc_data"),
     log:
-        "{out_folder}/logs/multiqc/multiqc.log",
+        "{results_dir}/logs/multiqc/multiqc.log",
     input:
         fastp=expand(
-            "{{out_folder}}/logs/fastp/{sample}.fastp.json", sample=samples.keys()
+            "{results_dir}/logs/fastp/{sample}.fastp.json",
+            sample=samples.keys(),
+            results_dir=config["results_dir"],
         ),
     conda:
         "envs/multiqc.yml"
     envmodules:
         "bioinfo-tools",
         "MultiQC/1.12",
+    resources:
+        mem_mb=mem_allowed,
     params:
         tmpdir="$TMPDIR/biodivcao_multiqc",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
@@ -121,78 +174,17 @@ rule multiqc:
         """
 
 
-rule minimap2_index_genome:
-    output:
-        idx="resources/genome_index/{ref}/minimap2.index",
-    input:
-        fasta=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["fasta"],
-    log:
-        "resources/logs/genome_mappings/{ref}/minimap2/index.log",
-    envmodules:
-        "bioinfo-tools",
-        "minimap2/2.24-r1122",
-    conda:
-        "envs/mapping.yaml"
-    threads: config["minimap2"]["threads"]
-    params:
-        split_num=config["minimap2"]["split_num"],
-        tmpdir="$TMPDIR/{ref}.minimap2",
-        outdir=lambda wildcards, output: os.path.dirname(output.idx),
-    resources:
-        runtime=60 * 24,
-    shell:
-        """
-        exec &>{log}
-        mkdir -p {params.tmpdir}
-        minimap2 -I {params.split_num}G -t {threads} -d {params.tmpdir}/minimap2.index {input.fasta}
-        mv {params.tmpdir}/* {params.outdir}
-        rm -rf {params.tmpdir}        
-        """
+## GENOME MAPPING ##
+# Map CAO samples to the database of fish genomes. It first maps the reads,
+# filters the results then blasts the mapped reads against nt. The mapping and
+# blast results are filtered using taxon lineage info and a custom python script.
+# Only reads that have a blast hit to a rayfinned fish (actinopterygii) or
+# cartilagenous fish (chondrichthyes) are reported. Note that reads from a pair
+# are considered as 1 in the final results.
 
-
-rule minimap2_map_genome:
-    output:
-        bam="{out_folder}/results/genome_mappings/{ref}/minimap2/{sample}.filtered.bam",
-    input:
-        R1=rules.fastp.output.R1,
-        R2=rules.fastp.output.R2,
-        idx=rules.minimap2_index_genome.output.idx,
-    log:
-        log="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/run.log",
-        maplog="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/{sample}.log",
-        coverm="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/coverm.log",
-        env="{out_folder}/logs/genome_mappings/{ref}/minimap2/{sample}/run_env.yaml",
-    params:
-        tmpdir="$TMPDIR/{ref}.{sample}.minimap2",
-        ani_cutoff=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
-            "ani_cutoff"
-        ],
-        min_len=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
-            "min_len"
-        ],
-    conda:
-        "envs/mapping.yaml"
-    envmodules:
-        "bioinfo-tools",
-        "minimap2/2.24-r1122",
-    threads: config["minimap2"]["threads"]
-    resources:
-        runtime=60 * 24,
-    group:
-        "group1"
-    shell:
-        """
-        exec &>{log.log}
-        mkdir -p {params.tmpdir}
-        sam_threads=$(({threads} - 1))
-
-        minimap2 -x sr --MD -a -t {threads} {input.idx} {input.R1} {input.R2} 2> {log.maplog} \
-            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
-
-        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
-        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
-        rm -rf {params.tmpdir}
-        """
+# The pipeline requires the 'taxon_table.csv' to run. This file is produce when
+# running the database build pipeline and contains the taxon info for each
+# assembly contig.
 
 
 rule bowtie2_index_genome:
@@ -209,11 +201,13 @@ rule bowtie2_index_genome:
         "bioinfo-tools",
         "bowtie2/2.4.5",
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
+    container:
+        "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
     resources:
-        runtime=lambda wildcards: 48 * 60,
-        mem_mb=250000,
+        runtime=48 * 60,
+        mem_mb=mem_allowed,
     params:
         tmpdir="$TMPDIR/{ref}.bowtie2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
@@ -231,131 +225,207 @@ rule bowtie2_index_genome:
 
 rule bowtie2_map_genome:
     output:
-        bam="{out_folder}/results/genome_mappings/{ref}/bowtie2/{sample}.filtered.bam",
+        bam=temp("{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.bam"),
     input:
         idx=rules.bowtie2_index_genome.output,
         R1=rules.fastp.output.R1,
         R2=rules.fastp.output.R2,
     log:
-        log="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/run.log",
-        maplog="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.log",
-        coverm="{out_folder}/logs/genome_mappings/{ref}/bowtie2/{sample}/coverm.log",
+        log="{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/run.log",
+        maplog="{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.log",
     params:
         idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0].replace(".1", ""),
         tmpdir="$TMPDIR/{ref}.{sample}.bowtie2",
-        ani_cutoff=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
-            "ani_cutoff"
-        ],
-        min_len=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
-            "min_len"
-        ],
+    conda:
+        "envs/mapping.yml"
+    envmodules:
+        "bioinfo-tools",
+        "bowtie2/2.4.5",
+        "samtools/1.14",
     group:
         "group1"
-    conda:
-        "envs/mapping.yaml"
-    threads: config["bowtie2"]["threads"]
+    resources:
+        runtime=4 * 60,
+        mem_mb=mem_allowed,
+    container:
+        "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
+    threads: 20
     shell:
         """
         exec &>{log.log}
         mkdir -p {params.tmpdir}
-        sam_threads=$(({threads} - 1))
         bowtie2 --seed 42 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2> {log.maplog} \
-            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
-
-        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
-        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
+            | samtools view -b - | samtools sort -o {params.tmpdir}/tmp.bam
+        mv {params.tmpdir}/tmp.bam {output.bam}
         rm -rf {params.tmpdir}
         """
 
 
-rule bwa_index:
-    output:
-        idx=expand(
-            "{{out_folder}}/resources/{{map_name}}/bwa-mem2/index.{suff}",
-            suff=["0123", "amb", "ann", "pac", "bwt.2bit.64"],
-        ),
+# Filter bamfile. The temporary sam file is used for parsing the results.
+rule filter_bam:
     input:
-        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
+        bam=rules.bowtie2_map_genome.output.bam,
+    output:
+        bam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.bam",
+        sam=temp(
+            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam"
+        ),
     log:
-        "{out_folder}/logs/mappings/{map_name}/bwa-mem2/index.log",
-    params:
-        tmpdir="$TMPDIR/{map_name}.bwa-mem2",
-        outdir=lambda wildcards, output: os.path.dirname(output[0]),
+        "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log",
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
-        "bwa-mem2/2.2.1-20211213-edc703f",
+        "samtools/1.14",
+    params:
+        tmpdir="$TMPDIR/{ref}.{sample}",
     resources:
-        runtime=60 * 10,
-    threads: 10
+        runtime=2 * 60,
+        mem_mb=mem_allowed,
     shell:
         """
         exec &>{log}
         mkdir -p {params.tmpdir}
-        bwa-mem2 index -p {params.tmpdir}/index {input.ref}
-        mv {params.tmpdir}/index* {params.outdir}
+        samtools view -b -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.bam {input.bam}
+        samtools view -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.sam {input.bam}
+        mv {params.tmpdir}/tmp.bam {output.bam}
+        mv {params.tmpdir}/tmp.sam {output.sam}
         rm -rf {params.tmpdir}
         """
 
 
-rule bwa_mem2:
-    output:
-        bam="{out_folder}/results/mappings/{map_name}/bwa-mem2/{sample}.filtered.bam",
+# Get mapped reads:
+rule get_reads:
     input:
-        R1=rules.fastp.output.R1,
-        R2=rules.fastp.output.R2,
-        idx=rules.bwa_index.output.idx,
+        bam=rules.filter_bam.output.bam,
+    output:
+        fa="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
     log:
-        log="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run.log",
-        maplog="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/{sample}.log",
-        coverm="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/coverm.log",
-        env="{out_folder}/logs/mappings/{map_name}/bwa-mem2/{sample}/run_env.yaml",
-    params:
-        tmpdir="$TMPDIR/{map_name}.bwa-mem2.{sample}",
-        ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
-        min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
-        idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0],
+        "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.get_reads.log",
     conda:
-        "envs/mapping.yaml"
-    threads: config["bwa-mem2"]["threads"]
+        "envs/mapping.yml"
+    envmodules:
+        "bioinfo-tools",
+        "samtools/1.14",
     resources:
-        runtime=60 * 24,
-    group:
-        "group1"
+        runtime=30,
     shell:
         """
-        exec &>{log.log}
-        mkdir -p {params.tmpdir}
-        sam_threads=$(({threads} - 1))
+        samtools fasta -n -o {output.fa} {input.bam} 2>{log}
+        """
 
-        bwa-mem2 mem -t {threads} {params.idx} {input.R1} {input.R2} 2>{log.maplog} \
-            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
 
-        coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
-        mv {params.tmpdir}/mapping_filtered.bam {output.bam}
-        rm -rf {params.tmpdir}
-        conda env export > {log.env}
+# Blast reads against nt
+rule blast_reads:
+    input:
+        fa=rules.get_reads.output[0],
+    output:
+        txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt",
+    log:
+        "{results_dir}/logs/blast_reads/{ref}/{sample}.log",
+    params:
+        db=config["blast"]["db"],
+        evalue=config["blast"]["evalue"],
+        max_target=config["blast"]["max_target_seqs"],
+    threads: 10
+    envmodules:
+        "bioinfo-tools",
+        "blast/2.9.0+",
+        "blast_databases",
+    conda:
+        "envs/blast.yml"
+    resources:
+        runtime=24 * 60,
+        mem_mb=mem_allowed,
+    shell:
+        """
+        blastn -num_threads {threads} -query {input.fa} \
+        -db {params.db} -evalue {params.evalue} -max_target_seqs {params.max_target} -outfmt \
+        "6 qseqid sseqid pident length mismatch gapopen \
+        qstart qend sstart send evalue bitscore staxid salltitles" \
+        -out {output.txt} >{log} 2>&1
+        """
+
+
+# Filter mapping result using blast results and
+# taxon lineage info. Report counts per species
+# and counts per taxon for each sample.
+
+
+rule download_taxdump:
+    output:
+        "resources/taxonomy/taxonomy.sqlite",
+    log:
+        "resources/taxonomy/download_taxdump.log",
+    conda:
+        "envs/ete3.yml"
+    params:
+        src=srcdir("scripts/download_taxdump.py"),
+    shell:
+        """
+        python {params.src} 2>{log}
+        """
+
+
+rule parse_results:
+    input:
+        reads=rules.blast_reads.output[0],
+        sam=rules.filter_bam.output.sam,
+        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "taxon_table"
+        ],
+        taxdb=rules.download_taxdump.output[0],
+    output:
+        taxid="{results_dir}/genome_mappings/{ref}/counts/{sample}_taxid_counts.txt",
+        species="{results_dir}/genome_mappings/{ref}/counts/{sample}_species_counts.txt",
+    log:
+        "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
+    conda:
+        "envs/ete3.yml"
+    params:
+        src=srcdir("scripts/filter_aln_and_blast_results.py"),
+    shell:
+        """
+        python {params.src} {input.reads} {input.sam} {input.tax} {output.taxid} {output.species} {input.taxdb} 2>{log}
+        """
+
+
+rule collate_counts:
+    output:
+        txt="{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
+    input:
+        expand(
+            "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_{{t}}_counts.txt",
+            sample=samples.keys(),
+        ),
+    log:
+        "{results_dir}/logs/collate_counts/{ref}.{t}_counts.txt",
+    params:
+        src=srcdir("scripts/collate_counts.py"),
+    shell:
+        """
+        python {params.src} {input} {output.txt} --strip {wildcards.t}_counts.txt 2>{log}
         """
 
 
 rule bowtie2_index:
     output:
         idx=expand(
-            "{{out_folder}}/resources/{{map_name}}/bowtie2/index.{suff}.bt2l",
+            "resources/{{map_name}}/bowtie2/index.{suff}.bt2l",
             suff=range(1, 5),
         ),
     input:
         ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
     log:
-        "{out_folder}/logs/mappings/{map_name}/bowtie2/index.log",
+        "resources/{map_name}/bowtie2/index.log",
     params:
         tmpdir="$TMPDIR/{map_name}.bowtie2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     resources:
-        runtime=60 * 10,
+        runtime=10 * 60,
+        mem_mb=mem_allowed,
     threads: 4
     shell:
         """
@@ -369,63 +439,59 @@ rule bowtie2_index:
 
 rule bowtie2:
     output:
-        bam="{out_folder}/results/mappings/{map_name}/bowtie2/{sample}.filtered.bam",
+        bam="{results_dir}/mappings/{map_name}/bowtie2/{sample}.filtered.bam",
     input:
         R1=rules.fastp.output.R1,
         R2=rules.fastp.output.R2,
         idx=rules.bowtie2_index.output.idx,
     log:
-        log="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/run.log",
-        maplog="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/{sample}.log",
-        coverm="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/coverm.log",
-        env="{out_folder}/logs/mappings/{map_name}/bowtie2/{sample}/run_env.yaml",
+        log="{results_dir}/logs/mappings/{map_name}/bowtie2/{sample}/run.log",
+        maplog="{results_dir}/logs/mappings/{map_name}/bowtie2/{sample}/{sample}.log",
+        coverm="{results_dir}/logs/mappings/{map_name}/bowtie2/{sample}/coverm.log",
     params:
         tmpdir="$TMPDIR/{map_name}.bowtie2.{sample}",
         ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
         min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
         idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0].replace(".1", ""),
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     threads: config["bowtie2"]["threads"]
     resources:
-        runtime=60 * 24,
-    group:
-        "group1"
+        runtime=24 * 60,
+        mem_mb=mem_allowed,
     shell:
         """
         exec &>{log.log}
         mkdir -p {params.tmpdir}
-        sam_threads=$(({threads} - 1))
-
         bowtie2 --seed 42 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2>{log.maplog} \
-            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
+            | samtools view -b - | samtools sort -o {params.tmpdir}/mapping_pairs.bam
 
         coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
         mv {params.tmpdir}/mapping_filtered.bam {output.bam}
         rm -rf {params.tmpdir}
-        conda env export > {log.env}
         """
 
 
 rule minimap2_index:
     output:
-        idx="{out_folder}/resources/{map_name}/minimap2/index",
+        idx="resources/{map_name}/minimap2/index",
     input:
         ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
     log:
-        "{out_folder}/logs/mappings/{map_name}/minimap2/index.log",
+        "resources/{map_name}/minimap2/index.log",
     threads: config["minimap2"]["threads"]
     params:
         split_num=config["minimap2"]["split_num"],
         tmpdir="$TMPDIR/{map_name}.minimap2",
         outdir=lambda wildcards, output: os.path.dirname(output.idx),
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
     resources:
-        runtime=60 * 24,
+        runtime=24 * 60,
+        mem_mb=mem_allowed,
     shell:
         """
         exec &>{log}
@@ -438,57 +504,54 @@ rule minimap2_index:
 
 rule minimap2:
     output:
-        bam="{out_folder}/results/mappings/{map_name}/minimap2/{sample}.filtered.bam",
+        bam="{results_dir}/mappings/{map_name}/minimap2/{sample}.filtered.bam",
     input:
         R1=rules.fastp.output.R1,
         R2=rules.fastp.output.R2,
         idx=rules.minimap2_index.output.idx,
     log:
-        log="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/run.log",
-        maplog="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/{sample}.log",
-        coverm="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/coverm.log",
-        env="{out_folder}/logs/mappings/{map_name}/minimap2/{sample}/run_env.yaml",
+        log="{results_dir}/logs/mappings/{map_name}/minimap2/{sample}/run.log",
+        maplog="{results_dir}/logs/mappings/{map_name}/minimap2/{sample}/{sample}.log",
+        coverm="{results_dir}/logs/mappings/{map_name}/minimap2/{sample}/coverm.log",
     params:
         tmpdir="$TMPDIR/{map_name}.minimap2.{sample}",
-        ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
-        min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
+        ani_cutoff=config["min_ani_cutoff"],
+        min_len=config["min_align_len"],
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
-    threads: config["minimap2"]["threads"]
+    threads: 20
     resources:
-        runtime=60 * 24,
+        runtime=2 * 60,
+        mem_mb=mem_allowed,
     group:
         "group1"
     shell:
         """
         exec &>{log.log}
         mkdir -p {params.tmpdir}
-        sam_threads=$(({threads} - 1))
-
         minimap2 -x sr --MD -a -t {threads} {input.idx} {input.R1} {input.R2} 2> {log.maplog} \
-            | samtools view -@ $sam_threads -b - | samtools sort -@ $sam_threads -o {params.tmpdir}/mapping_pairs.bam
+            | samtools view -b - | samtools sort -o {params.tmpdir}/mapping_pairs.bam
 
         coverm filter -b {params.tmpdir}/mapping_pairs.bam -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads} > {log.coverm} 2>&1
         mv {params.tmpdir}/mapping_filtered.bam {output.bam}
         rm -rf {params.tmpdir}
-        conda env export > {log.env}
         """
 
 
 rule samtools_stats:
     output:
-        stats="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.stats",
+        stats="{results_dir}/mappings/{map_name}/{mapper}/{sample}.stats",
     input:
-        "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.filtered.bam",
+        "{results_dir}/mappings/{map_name}/{mapper}/{sample}.filtered.bam",
     log:
-        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.filtered.samtools.stats",
+        "{results_dir}/logs/mappings/{map_name}/{mapper}/{sample}.filtered.samtools.stats",
     params:
         tmp="$TMPDIR/{map_name}.{mapper}.{sample}.stats",
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     shell:
         """
         exec &>{log}
@@ -499,15 +562,15 @@ rule samtools_stats:
 
 rule map_qc:
     output:
-        "{out_folder}/results/mappings/{map_name}/map_qc.html",
+        "{results_dir}/mappings/{map_name}/map_qc.html",
     input:
         expand(
-            "{{out_folder}}/results/mappings/{{map_name}}/{mapper}/{sample}.stats",
+            "{{results_dir}}/mappings/{{map_name}}/{mapper}/{sample}.stats",
             mapper=config["mappers"],
             sample=samples.keys(),
         ),
     log:
-        "{out_folder}/logs/multiqc/map_qc/{map_name}.log",
+        "{results_dir}/logs/multiqc/map_qc/{map_name}.log",
     conda:
         "envs/multiqc.yml"
     params:
@@ -526,27 +589,31 @@ rule map_qc:
 
 rule extract_reads:
     output:
-        fwd="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_fwd.fastq.gz",
-        rev="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_rev.fastq.gz",
-        unp="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}_unp.fastq.gz",
+        fwd="{results_dir}/mappings/{map_name}/{mapper}/{sample}_fwd.fastq.gz",
+        rev="{results_dir}/mappings/{map_name}/{mapper}/{sample}_rev.fastq.gz",
+        unp="{results_dir}/mappings/{map_name}/{mapper}/{sample}_unp.fastq.gz",
     input:
-        bam="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.filtered.bam",
+        bam="{results_dir}/mappings/{map_name}/{mapper}/{sample}.filtered.bam",
     log:
-        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.extract_reads.log",
+        "{results_dir}/logs/mappings/{map_name}/{mapper}/{sample}.extract_reads.log",
     params:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
         tmp_bam="$TMPDIR/{map_name}.{mapper}.{sample}/namesorted.bam",
         outdir=lambda wildcards, output: os.path.dirname(output.fwd),
+        ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
+        min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
     conda:
-        "envs/mapping.yaml"
+        "envs/mapping.yml"
     resources:
-        runtime=60 * 12,
+        runtime=12 * 60,
+        mem_mb=mem_allowed,
     threads: 4
     shell:
         """
         exec &> {log}
         mkdir -p {params.tmpdir}
-        samtools sort -n {input.bam} > {params.tmp_bam}
+        coverm filter -b {input.bam} -o {params.tmpdir}/mapping_filtered.bam --min-read-percent-identity {params.ani_cutoff} --min-read-aligned-length {params.min_len} --threads {threads}
+        samtools sort -n {params.tmpdir}/mapping_filtered.bam > {params.tmp_bam}
         samtools fastq -@ {threads} {params.tmp_bam} -1 {params.tmpdir}/{wildcards.sample}_fwd.fastq -2 {params.tmpdir}/{wildcards.sample}_rev.fastq -s {params.tmpdir}/{wildcards.sample}_unp.fastq 2> {log}
         gzip {params.tmpdir}/*.fastq
         mv {params.tmpdir}/*.fastq.gz {params.outdir}
@@ -554,17 +621,17 @@ rule extract_reads:
         """
 
 
-rule sintax:
+rule run_sintax:
     output:
-        "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
+        "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
     input:
         seq=expand(
-            "{{out_folder}}/results/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
+            "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
             seqtype=["fwd", "rev", "unp"],
         ),
         db=config["sintax"]["db"],
     log:
-        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.sintax.log",
+        "{results_dir}/logs/mappings/{map_name}/{mapper}/{sample}.sintax.log",
     params:
         fastq="$TMPDIR/{map_name}.{mapper}.{sample}/reads.fastq.gz",
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
@@ -573,8 +640,8 @@ rule sintax:
     conda:
         "envs/sintax.yml"
     resources:
-        runtime=60 * 10,
-        mem_mb=12000,
+        runtime=60,
+        mem_mb=mem_allowed,
     threads: 2
     shell:
         """
@@ -589,16 +656,16 @@ rule sintax:
 
 rule parse_sintax:
     output:
-        tsv="{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.tsv",
+        tsv="{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.tsv",
         krona=temp(
-            "{out_folder}/results/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.krona.txt"
+            "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.krona.txt"
         ),
     input:
-        rules.sintax.output,
+        rules.run_sintax.output,
     log:
-        "{out_folder}/logs/mappings/{map_name}/{mapper}/{sample}.parse_sintax.log",
+        "{results_dir}/logs/mappings/{map_name}/{mapper}/{sample}.parse_sintax.log",
     params:
-        src="workflow/scripts/parse_sintax.py",
+        src=srcdir("scripts/parse_sintax.py"),
         cutoff=config["sintax"]["cutoff"],
     container:
         "docker://snakemake/snakemake:latest"
@@ -610,14 +677,14 @@ rule parse_sintax:
 
 rule krona:
     output:
-        "{out_folder}/results/mappings/{map_name}/{mapper}/krona/krona.html",
+        "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
     input:
         expand(
-            "{{out_folder}}/results/mappings/{{map_name}}/{{mapper}}/{sample}.sintax.parsed.krona.txt",
+            "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{sample}.sintax.parsed.krona.txt",
             sample=samples.keys(),
         ),
     log:
-        "{out_folder}/logs/mappings/{map_name}/{mapper}/krona.log",
+        "{results_dir}/logs/mappings/{map_name}/{mapper}/krona.log",
     conda:
         "envs/krona.yml"
     params:

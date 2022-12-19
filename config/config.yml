@@ -2,17 +2,21 @@
 sample_list : "config/samples.csv"
 out_folder : "/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO"
 mappers:
-  - "bowtie2"
   - "minimap2"
 fastp :
   complexity_threshold : 30
 mappings_list : "config/mappings.csv"
 mappings:
   genomes:
-    all_assms_unmasked_w_additional_sp:
-      fasta: "/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/nbis/animal_genomes/unmasked/all_assms_unmasked_w_additional_sp.fasta"
-      ani_cutoff: 95
-      min_len: 80
+    target_species:
+      fasta: "resources/genome_index/target_species/target_species.fasta"
+      taxon_table: "resources/genome_index/target_species/taxon_table.csv"
+
+blast:
+  db: "/sw/data/blast_databases/nt"
+  evalue: 1e-30
+  max_target_seqs: 200
+
 
 bwa-mem2:
   threads: 10
