@@ -1,0 +1,8 @@
+name: dada2
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+dependencies:
+  - bioconductor-dada2
+  - r-argparse
