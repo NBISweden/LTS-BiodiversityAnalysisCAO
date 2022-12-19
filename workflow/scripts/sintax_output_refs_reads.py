@@ -5,10 +5,10 @@ import pandas as pd
 import sys
 
 
-def write_reads(l, outfile, suffix=""):
+def write_reads(l, outfile, prefix="", suffix=""):
     with open(outfile, "w") as fhout:
         for r in l:
-            fhout.write(f"^{r}{suffix}\n")
+            fhout.write(f"{prefix}{r}{suffix}\n")
 
 
 def main(args):
@@ -25,7 +25,7 @@ def main(args):
     # Get database records
     records = dbinfo.loc[dbinfo[args.rank].isin(sp)].index
     sys.stderr.write(f"{len(records)} reference records matched\n")
-    write_reads(records, args.refs_out, suffix=";")
+    write_reads(records, args.refs_out, prefix="^", suffix=";")
     write_reads(queries, args.queries_out)
 
 

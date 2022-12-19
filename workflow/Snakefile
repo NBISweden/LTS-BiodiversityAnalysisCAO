@@ -712,7 +712,10 @@ rule sintax_refs_reads_fasta:
     input:
         refids = rules.sintax_output_refs_reads.output.refs,
         queryids = rules.sintax_output_refs_reads.output.queries,
-        refs = config["sintax"]["info"]
+        fwd = rules.extract_reads.output.fwd,
+        rev= rules.extract_reads.output.rev,
+        unp= rules.extract_reads.output.unp,
+        refs = config["sintax"]["db"]
     envmodules:
         "bioinfo-tools",
         "SeqKit"
@@ -720,14 +723,18 @@ rule sintax_refs_reads_fasta:
         "envs/seqkit.yml"
     params:
         tmprefs = "$TMPDIR/{map_name}.{mapper}.{sample}.refs.fasta",
-        tmpq1 = "$TMPDIR/{map_name}.{mapper}.{sample}.queries_1.fasta",
-        tmpq2= "$TMPDIR/{map_name}.{mapper}.{sample}.queries_2.fasta",
-        tmpun= "$TMPDIR/{map_name}.{mapper}.{sample}.queries_unp.fasta",
+        tmpqueries = "$TMPDIR/{map_name}.{mapper}.{sample}.queries.fasta",
+        tmpqrename = "$TMPDIR/{map_name}.{mapper}.{sample}.queries.renamed.fasta",
     shell:
         """
         mkdir -p $TMPDIR
         seqkit grep -r -f {input.refids} {input.refs} > {params.tmprefs}
-         
+        seqkit grep -n -f {input.queryids} {input.fwd} | seqkit fq2fa > {params.tmpqueries}
+        seqkit grep -n -f {input.queryids} {input.rev} | seqkit fq2fa >> {params.tmpqueries}
+        seqkit grep -n -f {input.queryids} {input.unp} | seqkit fq2fa >> {params.tmpqueries}
+        seqkit rename {params.tmpqueries} > {params.tmpqrename}
+        mv {params.tmprefs} {output.refs}
+        mv {params.tmpqrename} {output.queries}
         """
 
 
