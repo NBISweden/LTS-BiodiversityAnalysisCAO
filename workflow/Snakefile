@@ -23,6 +23,8 @@ localrules:
     collate_counts,
     samtools_stats,
     krona,
+    sintax_output_refs_reads,
+    sintax_refs_reads_fasta,
     all,
 
 
@@ -678,23 +680,54 @@ rule parse_sintax:
 
 
 
-rule blastn_sintax:
+rule sintax_output_refs_reads:
     """
-    1. Read sintax output
-    2. For all reads assigned to species, extract reference sequences for species
+    Print reference ids from sintax output
     """
     input:
         tsv = rules.parse_sintax.output.tsv,
         fastq = rules.extract_reads.output,
-        db=config["sintax"]["db"]
+        fasta=config["sintax"]["db"],
+        info=config["sintax"]["info"]
     output:
-        "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.blastn.out"
+        refs=temp("{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.refs"),
+        queries=temp("{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.queries"),
+    log:
+        "{results_dir}/logs/mappings/{map_name}/{mapper}/{sample}.sintax_refs_reads.log"
     params:
-        src = srcdir("scripts/sintax_output_refs.py"),
+        src = srcdir("scripts/sintax_output_refs_reads.py"),
         resolve_rank = config["sintax"]["resolve_rank"]
     shell:
         """
-        python {params.src} {input.tsv}
+        python {params.src} {input.tsv} {input.info} {output.refs} {output.queries} --rank {params.resolve_rank} 2>{log} 
+        """
+
+rule sintax_refs_reads_fasta:
+    """
+    Create fasta files for references and reads
+    """
+    output:
+        refs = temp("{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.refs.fasta"),
+        queries = temp("{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.queries.fasta"),
+    input:
+        refids = rules.sintax_output_refs_reads.output.refs,
+        queryids = rules.sintax_output_refs_reads.output.queries,
+        refs = config["sintax"]["info"]
+    envmodules:
+        "bioinfo-tools",
+        "SeqKit"
+    conda:
+        "envs/seqkit.yml"
+    params:
+        tmprefs = "$TMPDIR/{map_name}.{mapper}.{sample}.refs.fasta",
+        tmpq1 = "$TMPDIR/{map_name}.{mapper}.{sample}.queries_1.fasta",
+        tmpq2= "$TMPDIR/{map_name}.{mapper}.{sample}.queries_2.fasta",
+        tmpun= "$TMPDIR/{map_name}.{mapper}.{sample}.queries_unp.fasta",
+    shell:
+        """
+        mkdir -p $TMPDIR
+        seqkit grep -r -f {input.refids} {input.refs} > {params.tmprefs}
+         
         """
 
 

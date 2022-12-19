@@ -29,3 +29,4 @@ sintax:
   ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
   replace_ranks: ["domain=kingdom", "kingdom=phylum", "phylum=class", "class=order", "order=family", "family=genus", "genus=species", "species=bold_id"]
   db: "resources/sintax/coi_db_sintax_sp_221216.fasta"
+  info: "resources/coidb_221216/coidb_221216.info.tsv"

@@ -109,6 +109,9 @@ properties:
         type: array
         description: "replacement keys for taxonomic ranks"
         default: []
+      info:
+        type: string
+        description: "record info file for sequences including taxonomic labels"
 
 required:
   - sample_list
