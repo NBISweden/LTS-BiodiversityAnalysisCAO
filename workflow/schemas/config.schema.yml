@@ -90,6 +90,8 @@ properties:
     type: object
     default:
       cutoff: 0.8
+      ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
+      replace_ranks: []
     properties:
       cutoff:
         type: number
@@ -99,6 +101,14 @@ properties:
         type: string
         description: "path to sintax database fasta file"
         default: ""
+      ranks:
+        type: array
+        description: "ranks to use for parsing in sintax"
+        default: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
+      replace_ranks:
+        type: array
+        description: "replacement keys for taxonomic ranks"
+        default: []
 
 required:
   - sample_list
