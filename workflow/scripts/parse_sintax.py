@@ -38,6 +38,13 @@ def compair(lineage1, lineage2, conf1, conf2, ranks):
             return lineage2, conf2, len(matching)
 
 
+def replace_ranks(dataf, replacements):
+    d = {}
+    for item in replacements:
+        key, value = item.split("=")
+        d[key] = value
+    return dataf.rename(columns=d)
+
 def write_krona(dataf, ranks, outfile):
     if dataf.shape[0] == 0:
         sys.stderr.write("No results\n")
@@ -52,6 +59,7 @@ def write_krona(dataf, ranks, outfile):
 
 def main(args):
     rank_translator = {
+        "d": "domain",
         "k": "kingdom",
         "p": "phylum",
         "c": "class",
@@ -60,7 +68,10 @@ def main(args):
         "g": "genus",
         "s": "species",
     }
-    ranks = ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
+    if not args.ranks:
+        ranks = ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
+    else:
+        ranks = args.ranks
     taxdict = {}
     confdict = {}
     cutoff = args.cutoff
@@ -75,7 +86,8 @@ def main(args):
             lineage = {}
             taxnames = []
             for i, item in enumerate(taxres.split(",")):
-                rank, _taxname = item.split(":")
+                rank = item.split(":")[0]
+                _taxname = ":".join(item.split(":")[1:])
                 taxname, _conf = _taxname.split("(")
                 if float(_conf.rstrip(")")) < cutoff:
                     break
@@ -92,6 +104,7 @@ def main(args):
             confdict[seqid] = float(conf)
             taxdict[seqid] = lineage
     dataf = pd.DataFrame(taxdict).T
+    dataf = replace_ranks(dataf, args.replace_ranks)
     dataf.to_csv(sys.stdout, sep="\t")
     if args.krona:
         write_krona(dataf, ranks, args.krona)
@@ -106,5 +119,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-k", "--krona", type=str, help="Write krona compatible output to file"
     )
+    parser.add_argument(
+        "-r", "--ranks", nargs="*", help="Ranks used in the SINTAX database"
+    )
+    parser.add_argument("--replace_ranks", nargs="*", help="Replace rank names in final output (<rank>=<newrank>)")
     args = parser.parse_args()
     main(args)
