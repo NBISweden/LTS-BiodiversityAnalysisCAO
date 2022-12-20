@@ -1,2 +1,2 @@
 map_name,reference,ani_cutoff,min_len
-coidb,resources/coidb_221216/coidb_220218.fasta,90,80
+coidb.extra,resources/coidb_221216/coidb_221216.extra.fasta,90,80
