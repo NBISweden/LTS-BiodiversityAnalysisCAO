@@ -668,7 +668,7 @@ rule parse_sintax:
         src=srcdir("scripts/parse_sintax.py"),
         cutoff=config["sintax"]["cutoff"],
         ranks=config["sintax"]["ranks"],
-        replace_ranks=config["sintax"]["replace_ranks"]
+        replace_ranks=config["sintax"]["replace_ranks"],
     container:
         "docker://snakemake/snakemake:latest"
     shell:
