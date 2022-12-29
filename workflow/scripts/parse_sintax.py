@@ -31,11 +31,10 @@ def compair(lineage1, lineage2, conf1, conf2, ranks):
         return lineage1, conf1, len(matching)
     elif len(l2) > len(l1):
         return lineage2, conf2, len(matching)
+    if conf1 >= conf2:
+        return lineage1, conf1, len(matching)
     else:
-        if conf1 >= conf2:
-            return lineage1, conf1, len(matching)
-        else:
-            return lineage2, conf2, len(matching)
+        return lineage2, conf2, len(matching)
 
 
 def replace_ranks(dataf, replacements):
@@ -45,7 +44,13 @@ def replace_ranks(dataf, replacements):
         d[key] = value
     return dataf.rename(columns=d)
 
-def write_krona(dataf, ranks, outfile):
+def write_krona(dataf, ranks, replacement_ranks, outfile):
+    if replacement_ranks:
+        r = {}
+        for item in replacement_ranks:
+            r1, r2 = item.split("=")
+            r[r1] = r2
+        ranks = [r[x] for x in ranks]
     if dataf.shape[0] == 0:
         sys.stderr.write("No results\n")
         with open(outfile, "w") as fhout:
@@ -107,7 +112,7 @@ def main(args):
     dataf = replace_ranks(dataf, args.replace_ranks)
     dataf.to_csv(sys.stdout, sep="\t")
     if args.krona:
-        write_krona(dataf, ranks, args.krona)
+        write_krona(dataf, ranks, args.replace_ranks, args.krona)
 
 
 if __name__ == "__main__":
