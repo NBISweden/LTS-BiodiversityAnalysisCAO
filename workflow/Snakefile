@@ -82,6 +82,12 @@ rule sintax:
             map_name=mappings.keys(),
             mapper=config["mappers"],
         ),
+        expand(
+            "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
+            results_dir=config["results_dir"],
+            map_name=mappings.keys(),
+            mapper=config["mappers"],
+        )
 
 
 rule gzip:
@@ -327,7 +333,7 @@ rule blast_reads:
         db=config["blast"]["db"],
         evalue=config["blast"]["evalue"],
         max_target=config["blast"]["max_target_seqs"],
-        tmp_out="$TMPDIR/{sample}.{ref}.blast_out"
+        tmp_out="$TMPDIR/{sample}.{ref}.blast_out",
     threads: config["blast"]["threads"]
     envmodules:
         "bioinfo-tools",
@@ -677,6 +683,22 @@ rule parse_sintax:
     shell:
         """
         python {params.src} {input} -c {params.cutoff} -k {output.krona} --ranks {params.ranks} --replace_ranks {params.replace_ranks} > {output.tsv} 2>{log}
+        """
+
+
+rule collate_sintax:
+    input:
+        expand(
+            "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{sample}.sintax.parsed.tsv",
+            sample=samples.keys(),
+        ),
+    output:
+        "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
+    params:
+        src=srcdir("scripts/collate_sintax.py"),
+    shell:
+        """
+        python {params.src} {input} -o {output[0]}
         """
 
 

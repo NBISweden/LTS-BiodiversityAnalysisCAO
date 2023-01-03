@@ -50,6 +50,14 @@ def all_output(wildcards):
                 mapper=config["mappers"],
             )
         )
+        output.extend(
+            expand(
+                "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
+                results_dir=config["results_dir"],
+                map_name=mappings.keys(),
+                mapper=config["mappers"],
+            )
+        )
     return output
 
 
