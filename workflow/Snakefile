@@ -21,13 +21,14 @@ localrules:
     map_qc,
     download_taxdump,
     collate_counts,
+    collate_sintax,
     samtools_stats,
     krona,
     all,
 
 
 # Read sample list
-sample_df = pd.read_csv(config["sample_list"], index_col=0)
+sample_df = pd.read_csv(config["sample_list"], comment="#", index_col=0)
 samples = sample_df.to_dict(orient="index")
 
 # Read mapping list
@@ -273,9 +274,7 @@ rule filter_bam:
         bam=rules.bowtie2_map_genome.output.bam,
     output:
         bam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.bam",
-        sam=temp(
-            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam"
-        ),
+        sam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam",
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log",
     conda:
