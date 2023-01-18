@@ -22,6 +22,7 @@ localrules:
     download_taxdump,
     collate_counts,
     collate_sintax,
+    parse_genome_counts,
     samtools_stats,
     krona,
     all,
@@ -88,7 +89,7 @@ rule sintax:
             results_dir=config["results_dir"],
             map_name=mappings.keys(),
             mapper=config["mappers"],
-        )
+        ),
 
 
 rule gzip:
@@ -413,6 +414,31 @@ rule collate_counts:
     shell:
         """
         python {params.src} {input} {output.txt} --strip {wildcards.t}_counts.txt 2>{log}
+        """
+
+
+rule parse_genome_counts:
+    output:
+        raw_counts="{results_dir}/genome_mappings/{ref}/summary_raw_counts.csv",
+        size_adjusted="{results_dir}/genome_mappings/{ref}/summary_size_adjusted.csv",
+        lib_sizes="{results_dir}/genome_mappings/{ref}/lib_sizes.csv",
+    input:
+        txt=expand(
+            "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_species_counts.txt",
+            sample=samples.keys(),
+        ),
+        log=expand(
+            "{{results_dir}}/logs/fastp/{sample}.fastp.log", sample=samples.keys()
+        ),
+    log:
+        "{results_dir}/logs/genome_mappings/{ref}/parse_results_w_size_factor.log",
+    params:
+        src=srcdir("scripts/parse_results_w_size_factor.py"),
+    shell:
+        """
+        python {params.src} --counts {input.txt} --logs {input.log} \
+            --raw_counts {output.raw_counts} --size_adjusted {output.size_adjusted} \
+            --lib_sizes {output.lib_sizes} > {log} 2>&1
         """
 
 
