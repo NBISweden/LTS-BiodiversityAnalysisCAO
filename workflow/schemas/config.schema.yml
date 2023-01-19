@@ -41,7 +41,12 @@ properties:
       db: "/sw/data/blast_databases/nt"
       evalue: 1e-30
       max_target_seqs: 200
+      threads: 20
     properties:
+      threads:
+        type: integer
+        description: "Threads to use for blastn"
+        default: 20
       db:
         type: string
         description: "Path to blast database (excluding suffix)"

@@ -20,14 +20,15 @@ localrules:
     get_reads,
     map_qc,
     download_taxdump,
-    collate_counts,
+    collate_sintax,
+    parse_genome_counts,
     samtools_stats,
     krona,
     all,
 
 
 # Read sample list
-sample_df = pd.read_csv(config["sample_list"], index_col=0)
+sample_df = pd.read_csv(config["sample_list"], comment="#", index_col=0)
 samples = sample_df.to_dict(orient="index")
 
 # Read mapping list
@@ -78,6 +79,12 @@ rule sintax:
     input:
         expand(
             "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
+            results_dir=config["results_dir"],
+            map_name=mappings.keys(),
+            mapper=config["mappers"],
+        ),
+        expand(
+            "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
             results_dir=config["results_dir"],
             map_name=mappings.keys(),
             mapper=config["mappers"],
@@ -267,9 +274,7 @@ rule filter_bam:
         bam=rules.bowtie2_map_genome.output.bam,
     output:
         bam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.bam",
-        sam=temp(
-            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam"
-        ),
+        sam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam",
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log",
     conda:
@@ -327,7 +332,8 @@ rule blast_reads:
         db=config["blast"]["db"],
         evalue=config["blast"]["evalue"],
         max_target=config["blast"]["max_target_seqs"],
-    threads: 10
+        tmp_out="$TMPDIR/{sample}.{ref}.blast_out",
+    threads: config["blast"]["threads"]
     envmodules:
         "bioinfo-tools",
         "blast/2.9.0+",
@@ -339,11 +345,13 @@ rule blast_reads:
         mem_mb=mem_allowed,
     shell:
         """
+        mkdir -p $TMPDIR
         blastn -num_threads {threads} -query {input.fa} \
         -db {params.db} -evalue {params.evalue} -max_target_seqs {params.max_target} -outfmt \
         "6 qseqid sseqid pident length mismatch gapopen \
         qstart qend sstart send evalue bitscore staxid salltitles" \
-        -out {output.txt} >{log} 2>&1
+        -out {params.tmp_out} >{log} 2>&1
+        mv {params.tmp_out} {output.txt}
         """
 
 
@@ -389,22 +397,28 @@ rule parse_results:
         python {params.src} {input.reads} {input.sam} {input.tax} {output.taxid} {output.species} {input.taxdb} 2>{log}
         """
 
-
-rule collate_counts:
+rule parse_genome_counts:
     output:
-        txt="{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
+        raw_counts="{results_dir}/genome_mappings/{ref}/summary_raw_counts.csv",
+        size_adjusted="{results_dir}/genome_mappings/{ref}/summary_size_adjusted.csv",
+        lib_sizes="{results_dir}/genome_mappings/{ref}/lib_sizes.csv",
     input:
-        expand(
-            "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_{{t}}_counts.txt",
+        txt=expand(
+            "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_species_counts.txt",
             sample=samples.keys(),
         ),
+        log=expand(
+            "{{results_dir}}/logs/fastp/{sample}.fastp.log", sample=samples.keys()
+        ),
     log:
-        "{results_dir}/logs/collate_counts/{ref}.{t}_counts.txt",
+        "{results_dir}/logs/genome_mappings/{ref}/parse_results_w_size_factor.log",
     params:
-        src=srcdir("scripts/collate_counts.py"),
+        src=srcdir("scripts/parse_results_w_size_factor.py"),
     shell:
         """
-        python {params.src} {input} {output.txt} --strip {wildcards.t}_counts.txt 2>{log}
+        python {params.src} --counts {input.txt} --logs {input.log} \
+            --raw_counts {output.raw_counts} --size_adjusted {output.size_adjusted} \
+            --lib_sizes {output.lib_sizes} > {log} 2>&1
         """
 
 
@@ -674,6 +688,22 @@ rule parse_sintax:
     shell:
         """
         python {params.src} {input} -c {params.cutoff} -k {output.krona} --ranks {params.ranks} --replace_ranks {params.replace_ranks} > {output.tsv} 2>{log}
+        """
+
+
+rule collate_sintax:
+    input:
+        expand(
+            "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{sample}.sintax.parsed.tsv",
+            sample=samples.keys(),
+        ),
+    output:
+        "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
+    params:
+        src=srcdir("scripts/collate_sintax.py"),
+    shell:
+        """
+        python {params.src} {input} -o {output[0]}
         """
 
 
