@@ -34,12 +34,11 @@ def all_output(wildcards):
     if os.path.exists(config["sintax"]["db"]):
         output.extend(
             expand(
-                "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.{suff}",
+                "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.tsv",
                 results_dir=config["results_dir"],
                 map_name=mappings.keys(),
                 mapper=config["mappers"],
                 sample=samples.keys(),
-                suff=["parsed.krona.txt", "parsed.tsv"],
             )
         )
         output.extend(
