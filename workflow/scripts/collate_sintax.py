@@ -5,6 +5,14 @@ import pandas as pd
 import os
 
 
+def add_empty(empty, lines, index):
+    d = {}
+    for sample in empty:
+        d[sample] = [0] * lines
+    _counts = pd.DataFrame(d, index=index)
+    return _counts
+
+
 def read_counts(files):
     counts = pd.DataFrame()
     empty = []
@@ -30,11 +38,14 @@ def read_counts(files):
     namedf = pd.DataFrame([x.split("|") for x in counts.index], columns=taxcols)
     namedf.index = counts.index
     counts = pd.merge(namedf, counts, left_index=True, right_index=True)
-    return counts.fillna(0),empty
+    return counts.fillna(0), empty
 
 
 def main(args):
-    counts = read_counts(args.files)
+    counts, empty = read_counts(args.files)
+    if len(empty) > 0:
+        _counts = add_empty(empty, counts.shape[0], counts.index)
+        counts = pd.merge(counts, _counts, left_index=True, right_index=True)
     counts.to_csv(args.outfile, index=False, sep="\t")
 
 
