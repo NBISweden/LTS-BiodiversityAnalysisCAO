@@ -16,7 +16,6 @@ localrules:
     get_reads,
     map_qc,
     download_taxdump,
-    collate_counts,
     collate_sintax,
     parse_genome_counts,
     samtools_stats,
@@ -397,25 +396,6 @@ rule parse_results:
         """
         python {params.src} {input.reads} {input.sam} {input.tax} {output.taxid} {output.species} {input.taxdb} 2>{log}
         """
-
-
-rule collate_counts:
-    output:
-        txt="{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
-    input:
-        expand(
-            "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_{{t}}_counts.txt",
-            sample=samples.keys(),
-        ),
-    log:
-        "{results_dir}/logs/collate_counts/{ref}.{t}_counts.txt",
-    params:
-        src=srcdir("scripts/collate_counts.py"),
-    shell:
-        """
-        python {params.src} {input} {output.txt} --strip {wildcards.t}_counts.txt 2>{log}
-        """
-
 
 rule parse_genome_counts:
     output:
