@@ -5,10 +5,6 @@ from snakemake.utils import validate
 validate(config, "schemas/config.schema.yml")
 
 
-wildcard_constraints:
-    results_dir="\w+",
-
-
 include: "scripts/common.py"
 
 
@@ -29,12 +25,16 @@ localrules:
 
 
 # Read sample list
-sample_df = pd.read_csv(config["sample_list"], comment="#", index_col=0)
+sample_df = pd.read_csv(config["sample_list"], comment="#", index_col=0, dtype={'sample_name': str})
 samples = sample_df.to_dict(orient="index")
 
 # Read mapping list
 mapping_df = pd.read_csv(config["mappings_list"], index_col=0)
 mappings = mapping_df.to_dict(orient="index")
+
+wildcard_constraints:
+    results_dir="\w+",
+    sample=f"({'|'.join(list(samples.keys()))})",
 
 
 rule all:
