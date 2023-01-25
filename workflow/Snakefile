@@ -409,7 +409,7 @@ rule parse_genome_counts:
     input:
         txt=expand(
             "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_species_counts.txt",
-            sample=samples.keys(),
+            sample=samples_to_genomemap(config,samples),
         ),
         log=expand(
             "{{results_dir}}/logs/fastp/{sample}.fastp.log", sample=samples.keys()

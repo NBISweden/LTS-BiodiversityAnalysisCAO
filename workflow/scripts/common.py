@@ -1,3 +1,7 @@
+def samples_to_genomemap(config, samples):
+    lib_types = config["lib_type_to_map"]
+    return [x for x in samples.keys() if samples[x]["lib_type"] in lib_types]
+
 def all_output(wildcards):
     output = []
     output.extend(
@@ -15,7 +19,6 @@ def all_output(wildcards):
         expand(
             "{results_dir}/genome_mappings/{ref}/{f}",
             results_dir=config["results_dir"],
-            sample=samples.keys(),
             f=["summary_raw_counts.csv", "summary_size_adjusted.csv", "lib_sizes.csv"],
             ref=config["mappings"]["genomes"].keys(),
         )
