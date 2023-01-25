@@ -699,11 +699,13 @@ rule collate_sintax:
         ),
     output:
         "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
+    log:
+        "{results_dir}/logs/mappings/{map_name}/{mapper}/collate_sintax.log"
     params:
         src=srcdir("scripts/collate_sintax.py"),
     shell:
         """
-        python {params.src} {input} -o {output[0]}
+        python {params.src} {input} -o {output[0]} 2>{log}
         """
 
 
