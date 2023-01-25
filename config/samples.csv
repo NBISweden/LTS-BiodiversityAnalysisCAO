@@ -851,7 +851,6 @@ LomRogIII-Seawater-0.8-3,raw_data/metagenomes/oden_2013/Seawater-0.8-3_fwd.fastq
 LomRogIII-Seawater-3-6,raw_data/metagenomes/oden_2013/Seawater-3-6_fwd.fastq.gz,raw_data/metagenomes/oden_2013/Seawater-3-6_rev.fastq.gz,DNA
 LomRogIII-Brine-3-14,raw_data/metagenomes/oden_2013/Brine-3-14_fwd.fastq.gz,raw_data/metagenomes/oden_2013/Brine-3-14_rev.fastq.gz,DNA
 LomRogIII-Brine-3-5,raw_data/metagenomes/oden_2013/Brine-3-5_fwd.fastq.gz,raw_data/metagenomes/oden_2013/Brine-3-5_rev.fastq.gz,DNA
-#3300059831,/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO/raw_data/img_data/3300059831_R1.fastq.gz,/crex/proj/uppstore2017149/BioDiversityAnalysisCAO/LTS-BiodiversityAnalysisCAO/raw_data/img_data/3300059831_R2.fastq.gz,RNA
 3300045738,/proj/uppstore2018116/moritz/img_dl//3300045738_R1.fastq.gz,/proj/uppstore2018116/moritz/img_dl//3300045738_R2.fastq.gz,DNA
 3300045789,/proj/uppstore2018116/moritz/img_dl//3300045789_R1.fastq.gz,/proj/uppstore2018116/moritz/img_dl//3300045789_R2.fastq.gz,DNA
 3300045790,/proj/uppstore2018116/moritz/img_dl//3300045790_R1.fastq.gz,/proj/uppstore2018116/moritz/img_dl//3300045790_R2.fastq.gz,DNA
