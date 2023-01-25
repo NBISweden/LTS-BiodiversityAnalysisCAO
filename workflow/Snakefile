@@ -24,12 +24,15 @@ localrules:
 
 
 # Read sample list
-sample_df = pd.read_csv(config["sample_list"], comment="#", index_col=0, dtype={'sample_name': str})
+sample_df = pd.read_csv(
+    config["sample_list"], comment="#", index_col=0, dtype={"sample_name": str}
+)
 samples = sample_df.to_dict(orient="index")
 
 # Read mapping list
 mapping_df = pd.read_csv(config["mappings_list"], index_col=0)
 mappings = mapping_df.to_dict(orient="index")
+
 
 wildcard_constraints:
     results_dir="\w+",
@@ -397,6 +400,7 @@ rule parse_results:
         python {params.src} {input.reads} {input.sam} {input.tax} {output.taxid} {output.species} {input.taxdb} 2>{log}
         """
 
+
 rule parse_genome_counts:
     output:
         raw_counts="{results_dir}/genome_mappings/{ref}/summary_raw_counts.csv",
@@ -405,7 +409,7 @@ rule parse_genome_counts:
     input:
         txt=expand(
             "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_species_counts.txt",
-            sample=samples.keys(),
+            sample=samples_to_genomemap(config,samples),
         ),
         log=expand(
             "{{results_dir}}/logs/fastp/{sample}.fastp.log", sample=samples.keys()

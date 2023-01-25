@@ -6,6 +6,7 @@ mappers:
 fastp :
   complexity_threshold : 30
 mappings_list : "config/mappings.csv"
+lib_type_to_map: ["DNA"]
 mappings:
   genomes:
     target_species:
