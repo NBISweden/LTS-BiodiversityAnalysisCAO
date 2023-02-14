@@ -1,5 +1,5 @@
 # configuration file for project
-sample_list : "config/samples.DNA.csv"
+sample_list : "config/samples.csv"
 results_dir: "results"
 mappers:
   - "minimap2"
