@@ -507,6 +507,7 @@ rule minimap2_index:
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
+	"samtools",
     resources:
         runtime=24 * 60,
         mem_mb=mem_allowed,
@@ -540,6 +541,7 @@ rule minimap2:
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
+	"samtools",
     threads: 20
     resources:
         runtime=2 * 60,
