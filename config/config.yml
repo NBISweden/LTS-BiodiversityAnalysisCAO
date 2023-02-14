@@ -18,6 +18,10 @@ blast:
   evalue: 1e-30
   max_target_seqs: 200
 
+krakenuniq:
+  db: "/sw/data/KrakenUniq_data/prebuilt/krakendb-2022-06-16-STANDARD"
+  exclude: [2,2157]
+
 bowtie2:
   threads: 20
 

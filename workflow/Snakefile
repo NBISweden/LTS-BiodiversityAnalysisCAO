@@ -638,15 +638,47 @@ rule extract_reads:
         rm -rf {params.tmpdir}
         """
 
+rule krakenuniq_filter:
+    output:
+        "{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz"
+    input:
+        seq = expand("{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
+            seqtype=["fwd", "rev", "unp"],
+            ),
+        db = expand("{dbdir}/database.{suff}",
+                dbdir=config["krakenuniq"]["db"],
+                suff=["idx","kdb","kdb.counts"],
+        )
+    log:
+        ku="{results_dir}/logs/{map_name}/{mapper}/{sample}.krakenuniq",
+        extract="{results_dir}/logs/{map_name}/{mapper}/{sample}.krakenuniq.extract"
+    envmodules:
+        "bioinfo-tools",
+        "KrakenUniq"
+    threads: 4
+    resources:
+        runtime = 120,
+    params:
+        tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}.fu",
+        db=lambda wildcards, input: os.path.dirname(input.db[0]),
+        exclude=",".join(config["krakenuniq"]["exclude"])
+    shell:
+        """
+        mkdir -p {params.tmpdir}
+        cat {input.seq} > {params.tmpdir}/fastq.gz
+        krakenuniq --threads {threads} --output {params.tmpdir}/krakenuniq.out \
+            --db {params.db} {params.tmpdir}/fastq.gz 2>{log.ku}
+        krakenuniq-extract-reads -i -t {params.db}/taxDB {params.exclude} \
+            {params.tmpdir}/krakenuniq.out {params.tmpdir}/fastq.gz 2>{log.extract} | gzip -c > {params.tmpdir}/filtered.fastq.gz
+        mv {params.tmpdir}/filtered.fastq.gz {output} 
+        """
+
 
 rule run_sintax:
     output:
         "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
     input:
-        seq=expand(
-            "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
-            seqtype=["fwd", "rev", "unp"],
-        ),
+        seq=rules.krakenuniq_filter.output.fastq,
         db=config["sintax"]["db"],
     log:
         "{results_dir}/logs/mappings/{map_name}/{mapper}/{sample}.sintax.log",

@@ -41,6 +41,21 @@ properties:
   mappings:
     type: object
     description: "Mapping parameters including reference path and taxa table"
+  krakenuniq:
+    type: object
+    default:
+      db: "/sw/data/KrakenUniq_data/prebuilt/krakendb-2022-06-16-STANDARD"
+      exclude: [2,2157]
+    properties:
+      db:
+        type: string
+        description: "path to a krakenuniq database"
+      exclude:
+        type: array
+        description: "list of taxonomy ids to exclude"
+        items:
+          type: integer
+
   blast:
     type: object
     default:
