@@ -39,6 +39,11 @@ wildcard_constraints:
     sample=f"({'|'.join(list(samples.keys()))})",
 
 
+## TARGETS ##
+# These rules can be targeted with snakemake on the command line:
+# e.g. snakemake ... genome_map sintax ...
+
+
 rule all:
     """Workflow pseudo rule"""
     input:
@@ -46,27 +51,37 @@ rule all:
 
 
 rule genome_map:
+    """
+    Performs the mapping against genomes and extraction of reads from bamfiles
+    for all samples
+    """
     input:
         expand(
             "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
             results_dir=config["results_dir"],
-            sample=samples.keys(),
+            sample=samples_to_genomemap(config, samples),
             ref=config["mappings"]["genomes"].keys(),
         ),
 
 
 rule genome_count:
+    """
+    Performs genome mapping + summarizing results into raw + size adjusted counts
+    """
     input:
         expand(
-            "{results_dir}/genome_mappings/{ref}/collated_counts/{t}_counts.txt",
+            "{results_dir}/genome_mappings/{ref}/summary_{f}.csv",
             results_dir=config["results_dir"],
-            sample=samples.keys(),
+            f=["raw_counts", "size_adjusted"],
             t=["taxid", "species"],
             ref=config["mappings"]["genomes"].keys(),
         ),
 
 
 rule coi_map:
+    """
+    Runs the COI mapping + extraction of reads
+    """
     input:
         expand(
             "{results_dir}/mappings/{map_name}/{mapper}/{sample}_{r}.fastq.gz",
@@ -79,6 +94,9 @@ rule coi_map:
 
 
 rule sintax:
+    """
+    Generate sintax output for all samples
+    """
     input:
         expand(
             "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
@@ -94,7 +112,13 @@ rule sintax:
         ),
 
 
+## UTILITY RULES ##
+
+
 rule gzip:
+    """
+    General rule to zip fastq files. Used mainly for the test data.
+    """
     output:
         "{f}.fastq.gz",
     input:
@@ -109,7 +133,13 @@ rule gzip:
         """
 
 
+## PREPROCESSING ##
+
+
 rule fastp:
+    """
+    Runs fastp preprocessing on the raw reads
+    """
     output:
         R1=temp("{results_dir}/fastp/{sample}.fastp.R1.fastq.gz"),
         R2=temp("{results_dir}/fastp/{sample}.fastp.R2.fastq.gz"),
@@ -154,6 +184,9 @@ rule fastp:
 
 
 rule multiqc:
+    """
+    Generate multiqc report for preprocessing steps
+    """
     output:
         "{results_dir}/multiqc/multiqc.html",
         directory("{results_dir}/multiqc/multiqc_data"),
@@ -198,6 +231,9 @@ rule multiqc:
 
 
 rule bowtie2_index_genome:
+    """
+    Indexing of genome fasta for bowtie2
+    """
     output:
         expand(
             "resources/genome_index/{{ref}}/{{ref}}.{suff}.bt2l",
@@ -234,6 +270,9 @@ rule bowtie2_index_genome:
 
 
 rule bowtie2_map_genome:
+    """
+    Maps preprocessed reads against genome database
+    """
     output:
         bam=temp("{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.bam"),
     input:
@@ -255,7 +294,7 @@ rule bowtie2_map_genome:
     group:
         "group1"
     resources:
-        runtime=4 * 60,
+        runtime=240,
         mem_mb=mem_allowed,
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
@@ -271,13 +310,15 @@ rule bowtie2_map_genome:
         """
 
 
-# Filter bamfile. The temporary sam file is used for parsing the results.
 rule filter_bam:
-    input:
-        bam=rules.bowtie2_map_genome.output.bam,
+    """
+    Filter bamfile. The temporary sam file is used for parsing the results.
+    """
     output:
         bam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.bam",
         sam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam",
+    input:
+        bam=rules.bowtie2_map_genome.output.bam,
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log",
     conda:
@@ -288,7 +329,7 @@ rule filter_bam:
     params:
         tmpdir="$TMPDIR/{ref}.{sample}",
     resources:
-        runtime=2 * 60,
+        runtime=120,
         mem_mb=mem_allowed,
     shell:
         """
@@ -302,12 +343,14 @@ rule filter_bam:
         """
 
 
-# Get mapped reads:
 rule get_reads:
-    input:
-        bam=rules.filter_bam.output.bam,
+    """
+    Extracts mapped reads from bamfile
+    """
     output:
         fa="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
+    input:
+        bam=rules.filter_bam.output.bam,
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.get_reads.log",
     conda:
@@ -317,18 +360,21 @@ rule get_reads:
         "samtools/1.14",
     resources:
         runtime=30,
+        mem_mb=mem_allowed,
     shell:
         """
         samtools fasta -n -o {output.fa} {input.bam} 2>{log}
         """
 
 
-# Blast reads against nt
 rule blast_reads:
-    input:
-        fa=rules.get_reads.output[0],
+    """
+    Blasts reads against nt database
+    """
     output:
         txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt",
+    input:
+        fa=rules.get_reads.output[0],
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.log",
     params:
@@ -358,12 +404,10 @@ rule blast_reads:
         """
 
 
-# Filter mapping result using blast results and
-# taxon lineage info. Report counts per species
-# and counts per taxon for each sample.
-
-
 rule download_taxdump:
+    """
+    Downloads taxdump and generates ete3 compatible database
+    """
     output:
         "resources/taxonomy/taxonomy.sqlite",
     log:
@@ -379,6 +423,12 @@ rule download_taxdump:
 
 
 rule parse_results:
+    """
+    Parses the genome mapping results and outputs counts of taxids/species
+    """
+    output:
+        taxid="{results_dir}/genome_mappings/{ref}/counts/{sample}_taxid_counts.txt",
+        species="{results_dir}/genome_mappings/{ref}/counts/{sample}_species_counts.txt",
     input:
         reads=rules.blast_reads.output[0],
         sam=rules.filter_bam.output.sam,
@@ -386,9 +436,6 @@ rule parse_results:
             "taxon_table"
         ],
         taxdb=rules.download_taxdump.output[0],
-    output:
-        taxid="{results_dir}/genome_mappings/{ref}/counts/{sample}_taxid_counts.txt",
-        species="{results_dir}/genome_mappings/{ref}/counts/{sample}_species_counts.txt",
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
     conda:
@@ -402,6 +449,9 @@ rule parse_results:
 
 
 rule parse_genome_counts:
+    """
+    Generates raw and size adjusted counts for all samples
+    """
     output:
         raw_counts="{results_dir}/genome_mappings/{ref}/summary_raw_counts.csv",
         size_adjusted="{results_dir}/genome_mappings/{ref}/summary_size_adjusted.csv",
@@ -409,10 +459,11 @@ rule parse_genome_counts:
     input:
         txt=expand(
             "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_species_counts.txt",
-            sample=samples_to_genomemap(config,samples),
+            sample=samples_to_genomemap(config, samples),
         ),
         log=expand(
-            "{{results_dir}}/logs/fastp/{sample}.fastp.log", sample=samples.keys()
+            "{{results_dir}}/logs/fastp/{sample}.fastp.log",
+            sample=samples_to_genomemap(config, samples),
         ),
     log:
         "{results_dir}/logs/genome_mappings/{ref}/parse_results_w_size_factor.log",
@@ -426,7 +477,13 @@ rule parse_genome_counts:
         """
 
 
+## COI marker gene mapping ##
+
+
 rule bowtie2_index:
+    """
+    Generates bowtie2 index database of COI reference fasta
+    """
     output:
         idx=expand(
             "resources/{{map_name}}/bowtie2/index.{suff}.bt2l",
@@ -456,6 +513,9 @@ rule bowtie2_index:
 
 
 rule bowtie2:
+    """
+    Maps preprocessed reads against the bowtie2 index
+    """
     output:
         bam="{results_dir}/mappings/{map_name}/bowtie2/{sample}.filtered.bam",
     input:
@@ -491,6 +551,9 @@ rule bowtie2:
 
 
 rule minimap2_index:
+    """
+    Generates minimap2 index for COI reference fasta
+    """
     output:
         idx="resources/{map_name}/minimap2/index",
     input:
@@ -507,7 +570,7 @@ rule minimap2_index:
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
-	"samtools",
+        "samtools",
     resources:
         runtime=24 * 60,
         mem_mb=mem_allowed,
@@ -522,6 +585,9 @@ rule minimap2_index:
 
 
 rule minimap2:
+    """
+    Maps preprocessed reads against the minimap2 index
+    """
     output:
         bam="{results_dir}/mappings/{map_name}/minimap2/{sample}.filtered.bam",
     input:
@@ -541,7 +607,7 @@ rule minimap2:
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
-	"samtools",
+        "samtools",
     threads: 20
     resources:
         runtime=2 * 60,
@@ -562,6 +628,9 @@ rule minimap2:
 
 
 rule samtools_stats:
+    """
+    Generate statistics of COI mapped reads
+    """
     output:
         stats="{results_dir}/mappings/{map_name}/{mapper}/{sample}.stats",
     input:
@@ -581,6 +650,9 @@ rule samtools_stats:
 
 
 rule map_qc:
+    """
+    Generate multiqc report for samtools stats file
+    """
     output:
         "{results_dir}/mappings/{map_name}/map_qc.html",
     input:
@@ -608,6 +680,10 @@ rule map_qc:
 
 
 rule extract_reads:
+    """
+    Extract reads mapped against the COI database, for further assignments
+    with SINTAX
+    """
     output:
         fwd="{results_dir}/mappings/{map_name}/{mapper}/{sample}_fwd.fastq.gz",
         rev="{results_dir}/mappings/{map_name}/{mapper}/{sample}_rev.fastq.gz",
@@ -640,33 +716,39 @@ rule extract_reads:
         rm -rf {params.tmpdir}
         """
 
+
 rule krakenuniq_filter:
+    """
+    Filter away taxa marked as contaminants using krakenuniq
+    """
     output:
-        "{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz"
+        "{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz",
     input:
-        seq = expand("{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
+        seq=expand(
+            "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
             seqtype=["fwd", "rev", "unp"],
-            ),
-        db = expand("{dbdir}/database.{suff}",
-                dbdir=config["krakenuniq"]["db"],
-                suff=["idx","kdb","kdb.counts"],
-        )
+        ),
+        db=expand(
+            "{dbdir}/database.{suff}",
+            dbdir=config["krakenuniq"]["db"],
+            suff=["idx", "kdb", "kdb.counts"],
+        ),
     log:
         ku="{results_dir}/logs/{map_name}/{mapper}/{sample}.krakenuniq",
-        extract="{results_dir}/logs/{map_name}/{mapper}/{sample}.krakenuniq.extract"
+        extract="{results_dir}/logs/{map_name}/{mapper}/{sample}.krakenuniq.extract",
     envmodules:
         "bioinfo-tools",
-        "KrakenUniq"
+        "KrakenUniq",
     conda:
         "envs/krakenuniq.yml"
     threads: 4
     resources:
-        runtime = 120,
+        runtime=120,
         mem_mb=mem_allowed,
     params:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}.fu",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
-        exclude=",".join(config["krakenuniq"]["exclude"])
+        exclude=",".join(config["krakenuniq"]["exclude"]),
     shell:
         """
         mkdir -p {params.tmpdir}
@@ -680,6 +762,9 @@ rule krakenuniq_filter:
 
 
 rule run_sintax:
+    """
+    Runs sintax classification on the mapped and filtered reads
+    """
     output:
         "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.tsv",
     input:
@@ -710,6 +795,9 @@ rule run_sintax:
 
 
 rule parse_sintax:
+    """
+    Parses the sintax output
+    """
     output:
         tsv="{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.tsv",
         krona=temp(
@@ -733,15 +821,18 @@ rule parse_sintax:
 
 
 rule collate_sintax:
+    """
+    Collate all output from sintax parsing
+    """
+    output:
+        "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
     input:
         expand(
             "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{sample}.sintax.parsed.tsv",
             sample=samples.keys(),
         ),
-    output:
-        "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
     log:
-        "{results_dir}/logs/mappings/{map_name}/{mapper}/collate_sintax.log"
+        "{results_dir}/logs/mappings/{map_name}/{mapper}/collate_sintax.log",
     params:
         src=srcdir("scripts/collate_sintax.py"),
     shell:
@@ -751,6 +842,9 @@ rule collate_sintax:
 
 
 rule krona:
+    """
+    Generate krona plot for all sintax output
+    """
     output:
         "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
     input:
