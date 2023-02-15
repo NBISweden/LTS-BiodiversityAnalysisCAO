@@ -722,7 +722,7 @@ rule krakenuniq_filter:
     Filter away taxa marked as contaminants using krakenuniq
     """
     output:
-        "{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz",
+        fastq="{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz"
     input:
         seq=expand(
             "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
@@ -748,7 +748,7 @@ rule krakenuniq_filter:
     params:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}.fu",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
-        exclude=",".join(config["krakenuniq"]["exclude"]),
+        exclude=",".join([str(x) for x in config["krakenuniq"]["exclude"]])
     shell:
         """
         mkdir -p {params.tmpdir}
