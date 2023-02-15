@@ -9,7 +9,7 @@ _marker gene taxonomic assignments_.
 
 In the genome mapping track preprocessed reads are mapped against a set of 
 target species genomes followed by a filtering step using nucleotide BLAST searches
-against the `nr` database. Read counts are collated and normalized counts per 
+against the `nt` database. Read counts are collated and normalized counts per 
 million (CPM) reads.
 
 In the marker gene track preprocessed reads are first mapped against a database
