@@ -477,6 +477,52 @@ rule parse_genome_counts:
         """
 
 
+## KrakenUniq profiling ##
+rule krakenuniq_reports:
+    input:
+        expand("{results_dir}/krakenuniq/{sample}.kreport",
+            results_dir=config["results_dir"],
+            sample=samples,
+        )
+
+rule krakenuniq:
+    output:
+        out="{results_dir}/krakenuniq/{sample}.out",
+        report="{results_dir}/krakenuniq/{sample}.kreport",
+    input:
+        R1=rules.fastp.output.R1,
+        R2=rules.fastp.output.R2,
+        db=expand(
+            "{dbdir}/database.{suff}",
+            dbdir=config["krakenuniq"]["db"],
+            suff=["idx", "kdb", "kdb.counts"],
+        ),
+    log:
+        ku="{results_dir}/logs/krakenuniq/{sample}.krakenuniq.log",
+    envmodules:
+        "bioinfo-tools",
+        "KrakenUniq",
+    conda:
+        "envs/krakenuniq.yml"
+    threads: 10
+    resources:
+        runtime=120,
+        mem_mb=mem_allowed,
+    params:
+        tmpdir="$TMPDIR/{sample}.krakenuniq",
+        db=lambda wildcards, input: os.path.dirname(input.db[0]),
+    shell:
+        """
+        mkdir -p {params.tmpdir}
+        cat {input.seq} > {params.tmpdir}/fastq.gz
+        krakenuniq --report-file {params.tmpdir}/krakenreport --threads {threads} \
+            --output {params.tmpdir}/krakenuniq.out \
+            --db {params.db} {params.tmpdir}/fastq.gz 2>{log.ku}
+        mv {params.tmpdir}/krakenuniq.out {output.out}
+        mv {params.tmpdir}/krakenreport {output.report}
+        """
+
+
 ## COI marker gene mapping ##
 
 
@@ -604,7 +650,7 @@ rule minimap2:
         min_len=config["min_align_len"],
     conda:
         "envs/mapping.yml"
-    #envmodules:
+    # envmodules:
     #    "bioinfo-tools",
     #    "minimap2/2.24-r1122",
     #    "samtools",
@@ -722,7 +768,7 @@ rule krakenuniq_filter:
     Filter away taxa marked as contaminants using krakenuniq
     """
     output:
-        fastq="{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz"
+        fastq="{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz",
     input:
         seq=expand(
             "{{results_dir}}/mappings/{{map_name}}/{{mapper}}/{{sample}}_{seqtype}.fastq.gz",
@@ -748,7 +794,7 @@ rule krakenuniq_filter:
     params:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}.fu",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
-        exclude=",".join([str(x) for x in config["krakenuniq"]["exclude"]])
+        exclude=",".join([str(x) for x in config["krakenuniq"]["exclude"]]),
     shell:
         """
         mkdir -p {params.tmpdir}
