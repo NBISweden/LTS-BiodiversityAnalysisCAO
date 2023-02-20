@@ -504,22 +504,25 @@ rule krakenuniq:
         "KrakenUniq",
     conda:
         "envs/krakenuniq.yml"
-    threads: 10
+    threads: 20
     resources:
         runtime=120,
         mem_mb=mem_allowed,
+    group:
+        "group1"
     params:
         tmpdir="$TMPDIR/{sample}.krakenuniq",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
     shell:
         """
         mkdir -p {params.tmpdir}
-        cat {input.seq} > {params.tmpdir}/fastq.gz
-        krakenuniq --report-file {params.tmpdir}/krakenreport --threads {threads} \
+        cp {input.R1} {input.R2} {params.tmpdir}
+        krakenuniq --paired --report-file {params.tmpdir}/krakenreport --threads {threads} \
             --output {params.tmpdir}/krakenuniq.out \
-            --db {params.db} {params.tmpdir}/fastq.gz 2>{log.ku}
+            --db {params.db} {params.tmpdir}/*.fastq.gz 2>{log.ku}
         mv {params.tmpdir}/krakenuniq.out {output.out}
         mv {params.tmpdir}/krakenreport {output.report}
+        rm -rf {params.tmpdir}
         """
 
 
