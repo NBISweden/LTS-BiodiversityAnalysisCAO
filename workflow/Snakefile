@@ -513,12 +513,13 @@ rule krakenuniq:
     params:
         tmpdir="$TMPDIR/{sample}.krakenuniq",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
+        preload_size=f"{mem_allowed}M"
     shell:
         """
         mkdir -p {params.tmpdir}
         cp {input.R1} {input.R2} {params.tmpdir}
-        krakenuniq --paired --report-file {params.tmpdir}/krakenreport --threads {threads} \
-            --output {params.tmpdir}/krakenuniq.out \
+        krakenuniq --preload-size {params.preload_size} --paired --threads {threads} \
+            --output {params.tmpdir}/krakenuniq.out --report-file {params.tmpdir}/krakenreport \
             --db {params.db} {params.tmpdir}/*.fastq.gz 2>{log.ku}
         mv {params.tmpdir}/krakenuniq.out {output.out}
         mv {params.tmpdir}/krakenreport {output.report}
