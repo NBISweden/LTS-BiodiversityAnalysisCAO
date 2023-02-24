@@ -46,7 +46,13 @@ def replace_ranks(dataf, replacements):
         d[key] = value
     return dataf.rename(columns=d), new_ranks
 
-def write_krona(dataf, ranks, outfile):
+def write_krona(dataf, ranks, replacement_ranks, outfile):
+    if replacement_ranks:
+        r = {}
+        for item in replacement_ranks:
+            r1, r2 = item.split("=")
+            r[r1] = r2
+        ranks = [r[x] for x in ranks]
     if dataf.shape[0] == 0:
         sys.stderr.write("No results\n")
         with open(outfile, "w") as fhout:
