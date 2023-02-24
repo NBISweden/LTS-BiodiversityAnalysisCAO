@@ -22,7 +22,6 @@ def compair(lineage1, lineage2, conf1, conf2, ranks):
     most resolved one, or (if the are equally resolved) the one with a
     higher confidence value at the lowest assigned rank
     """
-
     l1 = [lineage1[x] for x in ranks if not lineage1[x].startswith("Unclassified.")]
     l2 = [lineage2[x] for x in ranks if not lineage2[x].startswith("Unclassified.")]
     # Compare number of matching taxlabels
@@ -31,18 +30,21 @@ def compair(lineage1, lineage2, conf1, conf2, ranks):
         return lineage1, conf1, len(matching)
     elif len(l2) > len(l1):
         return lineage2, conf2, len(matching)
-    if conf1 >= conf2:
-        return lineage1, conf1, len(matching)
     else:
-        return lineage2, conf2, len(matching)
+        if conf1 >= conf2:
+            return lineage1, conf1, len(matching)
+        else:
+            return lineage2, conf2, len(matching)
 
 
 def replace_ranks(dataf, replacements):
     d = {}
+    new_ranks = []
     for item in replacements:
         key, value = item.split("=")
+        new_ranks.append(value)
         d[key] = value
-    return dataf.rename(columns=d)
+    return dataf.rename(columns=d), new_ranks
 
 def write_krona(dataf, ranks, replacement_ranks, outfile):
     if replacement_ranks:
@@ -109,10 +111,12 @@ def main(args):
             confdict[seqid] = float(conf)
             taxdict[seqid] = lineage
     dataf = pd.DataFrame(taxdict).T
-    dataf = replace_ranks(dataf, args.replace_ranks)
+    dataf, new_ranks = replace_ranks(dataf, args.replace_ranks)
     dataf.to_csv(sys.stdout, sep="\t")
     if args.krona:
-        write_krona(dataf, ranks, args.replace_ranks, args.krona)
+        if len(new_ranks) > 0:
+            ranks = new_ranks
+        write_krona(dataf, ranks, args.krona)
 
 
 if __name__ == "__main__":

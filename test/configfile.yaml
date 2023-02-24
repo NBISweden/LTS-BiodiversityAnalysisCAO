@@ -16,8 +16,9 @@ blast:
   evalue: 1e-30
   max_target_seqs: 200
 
-bwa-mem2:
-  threads: 10
+krakenuniq:
+  db: "resources/krakenuniq"
+  exclude: [2,2157]
 
 bowtie2:
   threads: 10
@@ -29,4 +30,6 @@ minimap2:
 sintax:
   threads: 1
   cutoff: 0.8
+  ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
+  replace_ranks: ["domain=kingdom", "kingdom=phylum", "phylum=class", "class=order", "order=family", "family=genus", "genus=species", "species=bold_id"]
   db: "data/sintaxdb.subset.fasta"

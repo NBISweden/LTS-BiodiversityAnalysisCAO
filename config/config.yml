@@ -1,11 +1,12 @@
 # configuration file for project
-sample_list : "config/samples.DNA.csv"
+sample_list : "config/samples.csv"
 results_dir: "results"
 mappers:
   - "minimap2"
 fastp :
   complexity_threshold : 30
 mappings_list : "config/mappings.csv"
+lib_type_to_map: ["DNA"]
 mappings:
   genomes:
     target_species:
@@ -16,6 +17,10 @@ blast:
   db: "/sw/data/blast_databases/nt"
   evalue: 1e-30
   max_target_seqs: 200
+
+krakenuniq:
+  db: "/sw/data/KrakenUniq_data/prebuilt/krakendb-2022-06-16-STANDARD"
+  exclude: [2,2157]
 
 bowtie2:
   threads: 20

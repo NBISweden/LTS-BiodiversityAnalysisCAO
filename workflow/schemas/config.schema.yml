@@ -17,6 +17,12 @@ properties:
     type: string
     description: "list of references and map params"
     default: "config/mappings.csv"
+  lib_type_to_map:
+    type: array
+    description: "What library type should be mapped to genomes"
+    default: ["DNA"]
+    items:
+      enum: ["DNA", "RNA"]
   min_ani_cutoff:
     type: integer
     description: "minimum ANI cutoff to use in first read filtering"
@@ -35,6 +41,21 @@ properties:
   mappings:
     type: object
     description: "Mapping parameters including reference path and taxa table"
+  krakenuniq:
+    type: object
+    default:
+      db: "/sw/data/KrakenUniq_data/prebuilt/krakendb-2022-06-16-STANDARD"
+      exclude: [2,2157]
+    properties:
+      db:
+        type: string
+        description: "path to a krakenuniq database"
+      exclude:
+        type: array
+        description: "list of taxonomy ids to exclude"
+        items:
+          type: integer
+
   blast:
     type: object
     default:
