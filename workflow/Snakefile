@@ -479,10 +479,12 @@ rule parse_genome_counts:
 ## KrakenUniq profiling ##
 rule krakenuniq_reports:
     input:
-        expand("{results_dir}/krakenuniq/{sample}.kreport",
+        expand(
+            "{results_dir}/krakenuniq/{sample}.kreport",
             results_dir=config["results_dir"],
             sample=samples,
-        )
+        ),
+
 
 rule krakenuniq:
     output:
@@ -512,7 +514,9 @@ rule krakenuniq:
     params:
         tmpdir="$TMPDIR/{sample}.krakenuniq",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
-        preload_size=lambda wildcards, threads: int(mem_allowed(wildcards, threads)*0.75)
+        preload_size=lambda wildcards, threads: int(
+            mem_allowed(wildcards, threads) * 0.75
+        ),
     shell:
         """
         mkdir -p {params.tmpdir}
