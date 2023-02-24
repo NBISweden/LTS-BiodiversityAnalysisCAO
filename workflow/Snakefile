@@ -80,16 +80,15 @@ rule genome_count:
 
 rule coi_map:
     """
-    Runs the COI mapping + extraction of reads
+    Runs the COI mapping + filtering with krakenuniq + extraction of reads
     """
     input:
         expand(
-            "{results_dir}/mappings/{map_name}/{mapper}/{sample}_{r}.fastq.gz",
+            "{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz",
             results_dir=config["results_dir"],
             map_name=mappings.keys(),
             mapper=config["mappers"],
             sample=samples.keys(),
-            r=["fwd", "rev", "unp"],
         ),
 
 
