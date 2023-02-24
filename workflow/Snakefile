@@ -513,7 +513,7 @@ rule krakenuniq:
     params:
         tmpdir="$TMPDIR/{sample}.krakenuniq",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
-        preload_size=lambda wildcards, threads: mem_allowed(wildcards, threads)
+        preload_size=lambda wildcards, threads: int(mem_allowed(wildcards, threads)*0.75)
     shell:
         """
         mkdir -p {params.tmpdir}
