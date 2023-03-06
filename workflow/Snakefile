@@ -431,9 +431,7 @@ rule parse_results:
     input:
         reads=rules.blast_reads.output[0],
         sam=rules.filter_bam.output.sam,
-        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
-            "taxon_table"
-        ],
+        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["taxon_table"],
         taxdb=rules.download_taxdump.output[0],
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
