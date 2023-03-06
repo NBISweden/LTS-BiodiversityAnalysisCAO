@@ -66,13 +66,15 @@ shark_reads = list()
 for k, v in blast_dic.items():
     list_values = v
     for i in list_values:
-        lineage = ncbi.get_lineage(i)
-        for x in lineage:
-            if x == actinopterygii and k not in fish_reads:
-                fish_reads.append(k)
-            elif x == chondrichthyes and k not in shark_reads:
-                shark_reads.append(k)
-
+        try:
+            lineage = ncbi.get_lineage(i)
+            for x in lineage:
+                if x == actinopterygii and k not in fish_reads:
+                    fish_reads.append(k)
+                elif x == chondrichthyes and k not in shark_reads:
+                    shark_reads.append(k)
+        except:
+            print("WARNING! No lineages found for " + str(i) + ". Skipping...")
 
 # Next is to filter the sam file and select
 # the rows that are either 'fish' or sharks
