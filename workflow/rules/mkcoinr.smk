@@ -1,3 +1,12 @@
+localrules:
+    coinr_db,
+    download_coinr,
+    download_coinr_src,
+    extract_coinr,
+    format_coinr,
+    coinr2sintax
+
+
 rule coinr_db:
     input:
         expand("resources/coinr/{name}.sintax.fasta",
