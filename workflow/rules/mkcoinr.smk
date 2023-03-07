@@ -1,9 +1,7 @@
 rule coinr_db:
     input:
-        expand(
-            "resources/coinr/{name}.{suff}",
+        expand("resources/coinr/{name}.sintax.fasta",
             name=config["coinr"]["dbname"],
-            suff=["qiime.fasta.gz", "taxonomy.tsv.gz"],
         ),
 
 rule download_coinr_src:
@@ -93,15 +91,23 @@ rule format_coinr:
 
 rule coinr2sintax:
     output:
-        "resources/coinr/COInr.sintax.fasta"
+        fas="resources/coinr/{name}.sintax.fasta"
     input:
         fas=rules.format_coinr.output.fas,
         tax=rules.format_coinr.output.tax,
+    log:
+        "logs/coinr/coinr2sintax.{name}.log"
     params:
         tmpdir="$TMPDIR/coinr2sintax",
+        src=srcdir("../scripts/coinr2sintax.py")
     shell:
         """
+        mkdir -p {params.tmpdir}
         gunzip -c {input.fas} > {params.tmpdir}/seqs.fasta
         gunzip -c {input.tax} > {params.tmpdir}/taxa.tsv
+        python {params.src} {params.tmpdir}/seqs.fasta \
+            {params.tmpdir}/taxa.tsv > {params.tmpdir}/sintax.fasta 2>{log} 
+        mv {params.tmpdir}/sintax.fasta {output.fas}
+        rm -rf {params.tmpdir}
         """
 
