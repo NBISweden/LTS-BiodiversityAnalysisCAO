@@ -15,23 +15,24 @@ def all_output(wildcards):
         )
     )
     # extend with fish mapping
-    output.extend(
-        expand(
-            "{results_dir}/genome_mappings/{ref}/{f}",
-            results_dir=config["results_dir"],
-            f=["summary_raw_counts.csv", "summary_size_adjusted.csv", "lib_sizes.csv"],
-            ref=config["mappings"]["genomes"].keys(),
+    if "mappings" in config.keys():
+        output.extend(
+            expand(
+                "{results_dir}/genome_mappings/{ref}/{f}",
+                results_dir=config["results_dir"],
+                f=["summary_raw_counts.csv", "summary_size_adjusted.csv", "lib_sizes.csv"],
+                ref=config["mappings"]["genomes"].keys(),
+            )
         )
-    )
+        output.extend(
+            expand(
+                "{results_dir}/mappings/{map_name}/map_qc.html",
+                map_name=mappings.keys(),
+                results_dir=config["results_dir"],
+            )
+        )
     output.extend(
         expand("{results_dir}/multiqc/multiqc.html", results_dir=config["results_dir"])
-    )
-    output.extend(
-        expand(
-            "{results_dir}/mappings/{map_name}/map_qc.html",
-            map_name=mappings.keys(),
-            results_dir=config["results_dir"],
-        )
     )
     # TODO: Fail explicitly here if sintax database does not exist
     if os.path.exists(config["sintax"]["db"]):
