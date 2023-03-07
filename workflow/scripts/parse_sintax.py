@@ -5,12 +5,12 @@ import pandas as pd
 import sys
 
 
-def add_lower(taxnames, lineage, ranks, i):
+def add_lower(taxnames, lineage, ranks):
     """
     Add lower level labels to assignment, e.g. adds "Unclassified.GenusA"
     to an assignment that is only classified down to genus level.
     """
-    missing = [r for r in ranks if not r in lineage.keys()]
+    missing = [r for r in ranks if r not in lineage.keys()]
     for rank in missing:
         lineage[rank] = f"Unclassified.{taxnames[-1]}"
     return lineage
@@ -108,7 +108,7 @@ def main(args):
                 taxnames.append(taxname)
                 lineage[rank_translator[rank]] = taxname
             if len(taxnames) < len(ranks):
-                lineage = add_lower(taxnames, lineage, ranks, i)
+                lineage = add_lower(taxnames, lineage, ranks)
             if seqid in taxdict.keys():
                 lineage1 = taxdict[seqid]
                 conf1 = confdict[seqid]
