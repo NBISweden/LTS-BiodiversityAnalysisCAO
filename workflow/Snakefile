@@ -155,6 +155,7 @@ rule fastp:
         R1=temp("{results_dir}/fastp/{sample}.fastp.R1.fastq.gz"),
         R2=temp("{results_dir}/fastp/{sample}.fastp.R2.fastq.gz"),
     log:
+        shell="{results_dir}/logs/fastp/{sample}.fastp.shell.log",
         log="{results_dir}/logs/fastp/{sample}.fastp.log",
         json="{results_dir}/logs/fastp/{sample}.fastp.json",
     input:
@@ -183,6 +184,7 @@ rule fastp:
         complexity_threshold=config["fastp"]["complexity_threshold"],
     shell:
         """
+        exec &>{log.shell}
         cat {input.R1} > {params.tmpR1}
         cat {input.R2} > {params.tmpR2}
         fastp --thread {threads} -y -Y {params.complexity_threshold} \
