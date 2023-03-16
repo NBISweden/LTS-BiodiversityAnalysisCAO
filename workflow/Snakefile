@@ -400,7 +400,7 @@ rule download_taxdump:
     Downloads taxdump and generates ete3 compatible database
     """
     output:
-        "resources/taxonomy/taxonomy.sqlite",
+        ancient("resources/taxonomy/taxonomy.sqlite"),
     log:
         "resources/taxonomy/download_taxdump.log",
     conda:
