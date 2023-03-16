@@ -399,7 +399,7 @@ rule download_taxdump:
     Downloads taxdump and generates ete3 compatible database
     """
     output:
-        ancient("resources/taxonomy/taxonomy.sqlite"),
+        "resources/taxonomy/taxonomy.sqlite",
     log:
         "resources/taxonomy/download_taxdump.log",
     conda:
@@ -423,7 +423,7 @@ rule parse_results:
         reads=rules.blast_reads.output[0],
         sam=rules.filter_bam.output.sam,
         tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["taxon_table"],
-        taxdb=rules.download_taxdump.output[0],
+        taxdb=ancient(rules.download_taxdump.output[0]),
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
     conda:
