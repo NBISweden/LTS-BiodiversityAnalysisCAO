@@ -10,7 +10,6 @@ include: "rules/mkcoinr.smk"
 
 localrules:
     parse_results,
-    gzip,
     multiqc,
     parse_sintax,
     get_reads,
