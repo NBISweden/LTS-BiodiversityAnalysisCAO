@@ -122,28 +122,6 @@ rule sintax:
             mapper=config["mappers"],
         ),
 
-
-## UTILITY RULES ##
-
-
-rule gzip:
-    """
-    General rule to zip fastq files. Used mainly for the test data.
-    """
-    output:
-        "{f}.fastq.gz",
-    input:
-        "{f}.fastq",
-    log:
-        "{f}.gzip.log",
-    container:
-        "docker://snakemake/snakemake:latest"
-    shell:
-        """
-        gzip -c {input} > {output} 2>{log}
-        """
-
-
 ## PREPROCESSING ##
 
 
