@@ -30,7 +30,7 @@ sp_result = sys.argv[5]
 taxdb = sys.argv[6]
 
 ncbi = NCBITaxa(dbfile=taxdb)
-
+ncbi.update_taxonomy_database()
 
 # Taxids for rayfinned fish and sharks/rays group
 actinopterygii = int(7898)
