@@ -135,6 +135,15 @@ properties:
         type: array
         description: "replacement keys for taxonomic ranks"
         default: []
+  coinr:
+    type: object
+    default:
+      dbname: "COInr"
+    properties:
+      dbname:
+        type: string
+        description: "Base name of COInr db"
+        default: "COInr"
 
 required:
   - sample_list

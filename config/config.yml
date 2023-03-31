@@ -6,6 +6,7 @@ mappers:
 fastp :
   complexity_threshold : 30
 mappings_list : "config/mappings.csv"
+# Specify library type to map against genomes database
 lib_type_to_map: ["DNA"]
 mappings:
   genomes:
@@ -20,7 +21,7 @@ blast:
 
 krakenuniq:
   db: "/sw/data/KrakenUniq_data/prebuilt/krakendb-2022-06-16-STANDARD"
-  exclude: [2,2157]
+  exclude: [2,2157,9604]
 
 bowtie2:
   threads: 20
@@ -31,6 +32,9 @@ minimap2:
 
 sintax:
   cutoff: 0.8
-  ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
-  replace_ranks: ["domain=kingdom", "kingdom=phylum", "phylum=class", "class=order", "order=family", "family=genus", "genus=species", "species=bold_id"]
-  db: "resources/sintax/coidb_221216.extra.sintax.fasta"
+  ranks: [ "kingdom", "phylum", "class", "order", "family", "genus", "species" ]
+  replace_ranks: [ "kingdom=kingdom", "phylum=phylum", "class=class", "order=order", "family=family", "genus=genus", "species=species"]
+  db: "resources/coinr/COInr.sintax.fasta"
+
+coinr:
+  dbname: "COInr"
