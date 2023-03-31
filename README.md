@@ -38,6 +38,44 @@ conda activate biodivcao
 
 ## Setup & configuration
 
+### Configuration file
+The workflow behaviour can be set using an external config file in `YAML` 
+format. A default config file is supplied under `config/config.yml`. 
+
+### Samples file
+The samples to be used in the workflow should be specified in a 
+comma-separated file that you point to with the config parameter 
+`sample_list` in the config file, _e.g._:
+
+```yaml
+sample_list: "mysample_list.csv"
+```
+
+The samples file should have the following format:
+
+```
+sample_name,fwd_libs,rev_libs,lib_type
+mysample1,path/to/mysample1_R1.fastq.gz,/path/to/mysample1_R2.fastq.gz,DNA
+mysample2,path/to/mysample2_R1.fastq.gz,/path/to/mysample2_R2.fastq.gz,RNA
+```
+
+The `sample_name` column specifies sample names used in the workflow and do 
+not have to match the file pattern in the actual fastq files.
+
+The `fwd_libs` and `rev_libs` columns should contain the path to fastq files 
+for the forward and reverse reads of each sample, respectively. If there are 
+several fastq files for a sample you can specify these by separating them 
+with a semicolon (`;`) in the `fwd_libs` and `rev_libs` columns, _e.g._:
+
+```
+sample_name,fwd_libs,rev_libs,lib_type
+mysample3,path/to/mysample3-1_R1.fastq.gz;path/to/mysample3-2_R1.fastq.gz,/path/to/mysample3-1_R2.fastq.gz;path/to/mysample3-2_R1.fastq.gz,DNA
+```
+
+The `lib_type` column specifies whether the sample has reads from `DNA` or 
+`RNA` sequences. Currently, the workflow only maps `DNA` reads against the 
+reference database in the [Target species track](#Target_species_track).
+
 ### Installing resources
 
 The workflow depends on some external resources that should be set up prior 
@@ -231,3 +269,46 @@ in the parsed sintax output you can use:
 sintax:
   replace_ranks: ["domain=kingdom", "kingdom=phylum", "phylum=class", "class=order", "order=family", "family=genus", "genus=species", "species=bold_id"]
 ```
+
+## Running the workflow
+
+When you've set up the required resources you're ready to start the workflow 
+with the command:
+
+```bash
+snakemake --configfile yourconfigfile.yml -j 1
+```
+
+This will start the workflow using settings supplied in `yourconfigfile.yml` 
+(update this to match your setup) and using at most one CPU core.
+
+### Configuration profiles
+The workflow comes with two configuration profiles: `local` and `slurm` for 
+running locally (_e.g._ on your laptop) or on a compute cluster with the 
+SLURM workload manager, respectively. You specify which of these profiles to 
+use by supplying either `--profile local` or `--profile slurm` to the 
+command line call, _e.g._:
+
+```
+snakemake --configfile yourconfigfile.yml --profile slurm
+```
+
+We strongly suggest that you use these profiles as they contain 
+several useful Snakemake command line settings. 
+
+In order to use the `slurm` profile you should update the file 
+`slurm/settings.json` with your SLURM account id. Modify the file by opening 
+it in your favourite text editor:
+```json
+{
+    "SBATCH_DEFAULTS": "account=SLURM_ACCOUNT no-requeue exclusive",
+    "CLUSTER_NAME": "",
+}
+```
+
+Change `SLURM_ACCOUNT` to match your SLURM account id.
+
+When you run with the `slurm` profile the `-j` flag in the snakemake command 
+specifies number of jobs that can be run in parallel. If you specify 
+`--profile slurm` you can omit the `-j` flag since it is set automatically 
+by the profile (default: 500).
