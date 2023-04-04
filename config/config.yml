@@ -13,6 +13,7 @@ mappings:
     target_species:
       fasta: "resources/genome_index/target_species/target_species.fasta"
       taxon_table: "resources/genome_index/target_species/taxon_table.csv"
+      to_include: "resources/genome_index/target_species/to_include.bed"
 
 blast:
   db: "/sw/data/blast_databases/nt"
