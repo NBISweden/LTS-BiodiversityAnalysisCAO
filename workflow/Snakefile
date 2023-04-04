@@ -309,6 +309,7 @@ rule filter_bam:
         sam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam",
     input:
         bam=rules.bowtie2_map_genome.output.bam,
+        keep=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["to_include"],
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log",
     conda:
@@ -325,8 +326,8 @@ rule filter_bam:
         """
         exec &>{log}
         mkdir -p {params.tmpdir}
-        samtools view -b -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.bam {input.bam}
-        samtools view -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.sam {input.bam}
+        samtools view -b -L {input.keep} -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.bam {input.bam}
+        samtools view -L {input.keep}-h -q 40 -f 0x2 -o {params.tmpdir}/tmp.sam {input.bam}
         mv {params.tmpdir}/tmp.bam {output.bam}
         mv {params.tmpdir}/tmp.sam {output.sam}
         rm -rf {params.tmpdir}
