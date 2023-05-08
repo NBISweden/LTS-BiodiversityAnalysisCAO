@@ -4,6 +4,7 @@ results_dir: "results"
 mappers:
   - "minimap2"
 fastp :
+  settings: ""
   complexity_threshold : 30
 mappings_list : "config/mappings.csv"
 # Specify library type to map against genomes database
