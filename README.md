@@ -128,7 +128,7 @@ CAKAOH010043426.1,Sebastiscus tertius,1472224
 The target species genome database can be built in any way you like, as long 
 as it conforms to the file format outlined here. A GitHub repository with 
 code to generate such a database can be found 
-[here](https://github.com/NBISweden/build_genomes_database) and you're free 
+[here](https://github.com/NBISweden/LTS-BuildGenomesDatabaseCAO) and you're free 
 to use that repo as a starting point.
 
 **BLAST database**
