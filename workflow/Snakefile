@@ -6,11 +6,10 @@ validate(config, "schemas/config.schema.yml")
 
 
 include: "scripts/common.py"
-
+include: "rules/mkcoinr.smk"
 
 localrules:
     parse_results,
-    gzip,
     multiqc,
     parse_sintax,
     get_reads,
@@ -49,6 +48,17 @@ rule all:
     input:
         all_output,
 
+def genome_map_input(wildcards):
+    if "mappings" in config.keys():
+        files=expand(
+            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
+            results_dir=config["results_dir"],
+            sample=samples_to_genomemap(config, samples),
+            ref=config["mappings"]["genomes"].keys(),
+        ),
+    else:
+        files = []
+    return files
 
 rule genome_map:
     """
@@ -56,26 +66,27 @@ rule genome_map:
     for all samples
     """
     input:
-        expand(
-            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
-            results_dir=config["results_dir"],
-            sample=samples_to_genomemap(config, samples),
-            ref=config["mappings"]["genomes"].keys(),
-        ),
+        genome_map_input
 
+def genome_count_input(wildcards):
+    if "mappings" in config.keys():
+        files=expand(
+            "{results_dir}/genome_mappings/{ref}/summary_{f}.csv",
+            results_dir=config["results_dir"],
+            f=["raw_counts", "size_adjusted"],
+            t=["taxid", "species"],
+            ref=config["mappings"]["genomes"].keys(),
+        )
+    else:
+        files = []
+    return files
 
 rule genome_count:
     """
     Performs genome mapping + summarizing results into raw + size adjusted counts
     """
     input:
-        expand(
-            "{results_dir}/genome_mappings/{ref}/summary_{f}.csv",
-            results_dir=config["results_dir"],
-            f=["raw_counts", "size_adjusted"],
-            t=["taxid", "species"],
-            ref=config["mappings"]["genomes"].keys(),
-        ),
+        genome_count_input
 
 
 rule coi_map:
@@ -110,28 +121,6 @@ rule sintax:
             mapper=config["mappers"],
         ),
 
-
-## UTILITY RULES ##
-
-
-rule gzip:
-    """
-    General rule to zip fastq files. Used mainly for the test data.
-    """
-    output:
-        "{f}.fastq.gz",
-    input:
-        "{f}.fastq",
-    log:
-        "{f}.gzip.log",
-    container:
-        "docker://snakemake/snakemake:latest"
-    shell:
-        """
-        gzip -c {input} > {output} 2>{log}
-        """
-
-
 ## PREPROCESSING ##
 
 
@@ -143,6 +132,7 @@ rule fastp:
         R1=temp("{results_dir}/fastp/{sample}.fastp.R1.fastq.gz"),
         R2=temp("{results_dir}/fastp/{sample}.fastp.R2.fastq.gz"),
     log:
+        shell="{results_dir}/logs/fastp/{sample}.fastp.shell.log",
         log="{results_dir}/logs/fastp/{sample}.fastp.log",
         json="{results_dir}/logs/fastp/{sample}.fastp.json",
     input:
@@ -169,13 +159,15 @@ rule fastp:
         outR1="$TMPDIR/{sample}.fastp.R1.fastq.gz",
         outR2="$TMPDIR/{sample}.fastp.R2.fastq.gz",
         complexity_threshold=config["fastp"]["complexity_threshold"],
+        settings=config["fastp"]["settings"]
     shell:
         """
+        exec &>{log.shell}
         cat {input.R1} > {params.tmpR1}
         cat {input.R2} > {params.tmpR2}
         fastp --thread {threads} -y -Y {params.complexity_threshold} \
             -i {params.tmpR1} -I {params.tmpR2} -o {params.outR1} \
-            -O {params.outR2} -j {log.json} > {log.log} 2>&1
+            -O {params.outR2} -j {log.json} {params.settings} > {log.log} 2>&1
         mv {params.outR1} {output.R1}
         mv {params.outR2} {output.R2}
         rm {params.tmpR1} {params.tmpR2}
@@ -431,10 +423,8 @@ rule parse_results:
     input:
         reads=rules.blast_reads.output[0],
         sam=rules.filter_bam.output.sam,
-        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
-            "taxon_table"
-        ],
-        taxdb=rules.download_taxdump.output[0],
+        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["taxon_table"],
+        taxdb=ancient(rules.download_taxdump.output[0]),
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
     conda:

@@ -82,8 +82,13 @@ properties:
   fastp:
     type: object
     default:
+      settings: ""
       complexity_threshold: 30
     properties:
+      settings:
+        type: string
+        default: ""
+        description: "Extra settings to pass to fastp"
       complexity_threshold:
         type: integer
         default: 30
@@ -135,6 +140,15 @@ properties:
         type: array
         description: "replacement keys for taxonomic ranks"
         default: []
+  coinr:
+    type: object
+    default:
+      dbname: "COInr"
+    properties:
+      dbname:
+        type: string
+        description: "Base name of COInr db"
+        default: "COInr"
 
 required:
   - sample_list
