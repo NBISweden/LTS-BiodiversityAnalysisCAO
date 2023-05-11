@@ -71,6 +71,6 @@ def mem_allowed(wildcards, threads):
 def krona_input_string(wildcards):
     input_string = []
     for sample in samples.keys():
-        text = f"results/mappings/{wildcards.map_name}/{wildcards.mapper}/{sample}.sintax.parsed.krona.txt,{sample}"
+        text = f"{wildcards.results_dir}/mappings/{wildcards.map_name}/{wildcards.mapper}/{sample}.sintax.parsed.krona.txt,{sample}"
         input_string.append(text)
     return " ".join(input_string)
