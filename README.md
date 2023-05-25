@@ -97,6 +97,7 @@ mappings:
     target_species:
       fasta: "resources/genome_index/target_species/target_species.fasta"
       taxon_table: "resources/genome_index/target_species/taxon_table.csv"
+      to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
 ```
 
 The `fasta` and `taxon_table` parameters specify paths to the fasta file and 
@@ -123,6 +124,19 @@ _taxon_table_
 ```
 AESE010000001.1,Leucoraja erinacea,7782
 CAKAOH010043426.1,Sebastiscus tertius,1472224
+```
+The `to_include` bed file that includes all of the contigs that are of interest 
+for downstream analysis. It could include an entry for all of the sequences in
+the target species genome database or just a subset. Here, it is used to filter
+alignments to human and herring. That is, the bedfile contains all of the contigs
+that are included in the target species genomes database except for human and
+herring.
+
+_to_include_
+```
+KB228878.1	0	17703537
+KB228879.1	0	17817800
+KB228880.1	0	9835568
 ```
 
 The target species genome database can be built in any way you like, as long 
