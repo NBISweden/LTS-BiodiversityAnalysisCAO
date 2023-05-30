@@ -26,6 +26,7 @@ localrules:
 sample_df = pd.read_csv(
     config["sample_list"], comment="#", index_col=0, dtype={"sample_name": str}
 )
+sample_df.rename(columns={'fwd': 'fwd_libs', 'rev': 'rev_libs', 'type': 'lib_type'}, inplace=True)
 samples = sample_df.to_dict(orient="index")
 
 # Read mapping list
