@@ -74,7 +74,7 @@ mysample3,path/to/mysample3-1_R1.fastq.gz;path/to/mysample3-2_R1.fastq.gz,/path/
 
 The `lib_type` column specifies whether the sample has reads from `DNA` or 
 `RNA` sequences. Currently, the workflow only maps `DNA` reads against the 
-reference database in the [Target species track](#Target_species_track).
+reference genomes database in the [Target species track](#Target_species_track).
 
 ### Installing resources
 
@@ -95,8 +95,8 @@ are:
 mappings:
   genomes:
     target_species:
-      fasta: "resources/genome_index/target_species/target_species.fasta"
-      taxon_table: "resources/genome_index/target_species/taxon_table.csv"
+      fasta: "resources/genome_index/all_verts_whuman/target_species.fasta"
+      taxon_table: "resources/genome_index/all_verts_whuman/taxon_table.csv"
       to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
 ```
 
