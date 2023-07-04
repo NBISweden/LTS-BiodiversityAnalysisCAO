@@ -296,7 +296,7 @@ rule bowtie2_map_genome:
         exec &>{log.log}
         mkdir -p {params.tmpdir}
         bowtie2 --seed 42 -p {threads} -x {params.idx} --very-sensitive -1 {input.R1} -2 {input.R2} 2> {log.maplog} \
-            | samtools view -b - | samtools sort -o {params.tmpdir}/tmp.bam
+            | samtools view -@ {threads} -b - | samtools sort -@ {threads} -o {params.tmpdir}/tmp.bam
         mv {params.tmpdir}/tmp.bam {output.bam}
         rm -rf {params.tmpdir}
         """
