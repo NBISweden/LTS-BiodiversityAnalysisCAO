@@ -55,8 +55,7 @@ fh=open(blast_result,"r")
 for line in fh:
 	line = line.strip().split('\t')
 	read = str(line[0])
-	# taxid = int(line[11])
-	taxid = int(line[12])
+	taxid = int(line[9])
 	if read not in blast_dic.keys():
 		blast_dic[read] = list()
 		blast_dic[read].append(taxid)
