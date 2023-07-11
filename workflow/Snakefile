@@ -432,7 +432,7 @@ rule parse_results:
     conda:
         "envs/ete3.yml"
     params:
-        src=srcdir("scripts/filter_aln_and_blast_results.py"),
+        src=srcdir("scripts/filter_mapping_blast_results.py"),
     shell:
         """
         python {params.src} {input.reads} {input.sam} {input.tax} {output.taxid} {output.species} {input.taxdb} 2>{log}
