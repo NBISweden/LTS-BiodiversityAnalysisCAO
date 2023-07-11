@@ -32,12 +32,12 @@ tax_result = sys.argv[4]
 sp_result = sys.argv[5]
 
 # For running within the main workflow, use:
-#taxdb = sys.argv[6]
-#ncbi = NCBITaxa(dbfile=taxdb)
-#ncbi.update_taxonomy_database()
+taxdb = sys.argv[6]
+ncbi = NCBITaxa(dbfile=taxdb)
+ncbi.update_taxonomy_database()
 
 # For testing outside the main workflow, use:
-ncbi = NCBITaxa()
+#ncbi = NCBITaxa()
 
 # Dictionary for birds, mammals, bony fish and
 # cartilagenous fish classification
