@@ -398,7 +398,7 @@ rule blast_reads:
     output:
         txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt",
     input:
-        fa=rules.get_reads.output[0],
+        fa=rules.subset_reads.output.fa
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.log",
     params:
