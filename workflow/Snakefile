@@ -359,6 +359,37 @@ rule get_reads:
         samtools fasta -n -o {output.fa} {input.bam} 2>{log}
         """
 
+# Subset cleaned reads
+# Checkpoint in case of contamination. For most, samples
+# subsetting should result in the same number of mapped
+# mapped reads
+
+rule subset_reads:
+    output:
+        fa="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/subset/{sample}.reads.fa",
+    input:
+        fa=rules.get_reads.output.fa
+    conda:
+        "envs/seqtk.yml"
+    shell:
+        """
+	    seqtk sample -s100 {input.fa} 50000 > {output.fa}
+        """
+
+# Compare read counts and flag unusual files
+rule compare_counts:
+    input:
+        f1=rules.get_reads.output.fa,
+        f2=rules.subset_reads.output.fa,
+    output:
+        txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/subset/{sample}.log.txt"
+    params:
+        src=srcdir("scripts/flag_unusual_files.py"),
+    shell:
+        """
+		python {params.src} {input.f1} {input.f2} {output.txt}
+		"""
+
 
 rule blast_reads:
     """
