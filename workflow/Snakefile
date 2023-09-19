@@ -174,6 +174,46 @@ rule fastp:
         rm {params.tmpR1} {params.tmpR2}
         """
 
+rule fastp_dedup:
+    output:
+        R1 = temp("{results_dir}/fastp/{sample}.fastp.dedup.R1.fastq.gz"),
+        R2 = temp("{results_dir}/fastp/{sample}.fastp.dedup.R2.fastq.gz"),
+    input:
+        R1=rules.fastp.output.R1,
+        R2=rules.fastp.output.R2,
+    log:
+        shell="{results_dir}/logs/fastp/{sample}.fastp.dedup.shell.log",
+        log="{results_dir}/logs/fastp/{sample}.fastp.dedup.log",
+        json="{results_dir}/logs/fastp/{sample}.fastp.dedup.json",
+    params:
+        tmpR1="$TMPDIR/{sample}.R1.fastq.gz",
+        tmpR2="$TMPDIR/{sample}.R2.fastq.gz",
+        outR1="$TMPDIR/{sample}.fastp.R1.fastq.gz",
+        outR2="$TMPDIR/{sample}.fastp.R2.fastq.gz",
+        complexity_threshold=config["fastp"]["complexity_threshold"],
+    envmodules:
+        "bioinfo-tools",
+        "fastp/0.23.2",
+    conda:
+        "envs/fastp.yml"
+    group:
+        "group1"
+    threads: 10
+    resources:
+        runtime=60,
+        mem_mb=mem_allowed,
+    shell:
+        """
+        exec &>{log.shell}
+        cat {input.R1} > {params.tmpR1}
+        cat {input.R2} > {params.tmpR2}
+        fastp --thread {threads} -i {params.tmpR1} -I {params.tmpR2} -o {params.outR1} \
+            -O {params.outR2} -j {log.json} --dedup --disable_adapter_trimming \
+            --disable_quality_filtering --disable_trim_poly_g --disable_length_filtering > {log.log} 2>&1
+        mv {params.outR1} {output.R1}
+        mv {params.outR2} {output.R2}
+        rm {params.tmpR1} {params.tmpR2}        
+        """
 
 rule multiqc:
     """
@@ -269,8 +309,8 @@ rule bowtie2_map_genome:
         bam=temp("{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.bam"),
     input:
         idx=rules.bowtie2_index_genome.output,
-        R1=rules.fastp.output.R1,
-        R2=rules.fastp.output.R2,
+        R1=rules.fastp_dedup.output.R1,
+        R2=rules.fastp_dedup.output.R2,
     log:
         log="{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/run.log",
         maplog="{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/{sample}.log",
