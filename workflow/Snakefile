@@ -160,13 +160,14 @@ rule fastp:
         outR1="$TMPDIR/{sample}.fastp.R1.fastq.gz",
         outR2="$TMPDIR/{sample}.fastp.R2.fastq.gz",
         complexity_threshold=config["fastp"]["complexity_threshold"],
+        min_length=config["fastp"]["min_length"],
         settings=config["fastp"]["settings"]
     shell:
         """
         exec &>{log.shell}
         cat {input.R1} > {params.tmpR1}
         cat {input.R2} > {params.tmpR2}
-        fastp --thread {threads} -y -Y {params.complexity_threshold} \
+        fastp --thread {threads} -y -Y {params.complexity_threshold} -l {params.min_length} \
             -i {params.tmpR1} -I {params.tmpR2} -o {params.outR1} \
             -O {params.outR2} -j {log.json} {params.settings} > {log.log} 2>&1
         mv {params.outR1} {output.R1}

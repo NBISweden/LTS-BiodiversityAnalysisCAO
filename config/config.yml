@@ -6,6 +6,7 @@ mappers:
 fastp :
   settings: ""
   complexity_threshold : 30
+  min_length: 30
 mappings_list : "config/mappings.csv"
 # Specify library type to map against genomes database
 lib_type_to_map: ["DNA"]
