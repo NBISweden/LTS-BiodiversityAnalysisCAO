@@ -51,12 +51,12 @@ rule all:
 
 def genome_map_input(wildcards):
     if "mappings" in config.keys():
-        files=expand(
+        files = expand(
             "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
             results_dir=config["results_dir"],
             sample=samples_to_genomemap(config, samples),
             ref=config["mappings"]["genomes"].keys(),
-        ),
+        )
     else:
         files = []
     return files
