@@ -12,7 +12,7 @@ mappings_list : "config/mappings.csv"
 lib_type_to_map: ["DNA"]
 mappings:
   genomes:
-    target_species:
+    all_verts_whuman:
       fasta: "resources/genome_index/all_verts_whuman/all_verts_whuman.fasta"
       taxon_table: "resources/genome_index/all_verts_whuman/taxon_table.csv"
       to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
