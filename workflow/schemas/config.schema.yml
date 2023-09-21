@@ -84,6 +84,7 @@ properties:
     default:
       settings: ""
       complexity_threshold: 30
+      min_length: 30
     properties:
       settings:
         type: string
@@ -93,6 +94,10 @@ properties:
         type: integer
         default: 30
         description: "complexity threshold for fastp"
+      min_length:
+        type: integer
+        default: 30
+        description: "Minimum read length in fastp QC"
   bowtie2:
     type: object
     default:

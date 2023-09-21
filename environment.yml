@@ -10,3 +10,4 @@ dependencies:
   - snakefmt=0.6.1
   - biopython=1.81
   - tqdm
+  - mamba

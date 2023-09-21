@@ -4,21 +4,23 @@ localrules:
     download_coinr_src,
     extract_coinr,
     format_coinr,
-    coinr2sintax
+    coinr2sintax,
 
 
 rule coinr_db:
     input:
-        expand("resources/coinr/{name}.sintax.fasta",
+        expand(
+            "resources/coinr/{name}.sintax.fasta",
             name=config["coinr"]["dbname"],
         ),
+
 
 rule download_coinr_src:
     output:
         format_db="resources/coinr/format_db.pl",
         mkdb="resources/coinr/mkdb.pm",
     log:
-        "logs/coinr/download_coinr_src.log"
+        "logs/coinr/download_coinr_src.log",
     retries: 2
     params:
         format_db_url="https://raw.githubusercontent.com/meglecz/mkCOInr/main/scripts/format_db.pl",
@@ -30,11 +32,12 @@ rule download_coinr_src:
         curl -L -o {output.mkdb} {params.mkdb_url}
         """
 
+
 rule download_coinr:
     output:
-        tar=temp("resources/coinr/coinr.tar.gz")
+        tar=temp("resources/coinr/coinr.tar.gz"),
     log:
-        "logs/coinr/download.log"
+        "logs/coinr/download.log",
     retries: 2
     params:
         url="https://zenodo.org/record/6555985/files/COInr_2022_05_06.tar.gz?download=1",
@@ -47,17 +50,18 @@ rule download_coinr:
         rm -rf {params.tmpdir}
         """
 
+
 rule extract_coinr:
     input:
         rules.download_coinr.output.tar,
     output:
         tsv="resources/coinr/COInr.tsv.gz",
-        tax="resources/coinr/taxonomy.tsv.gz"
+        tax="resources/coinr/taxonomy.tsv.gz",
     log:
-        "logs/coinr/extract.log"
+        "logs/coinr/extract.log",
     params:
         outdir=lambda wildcards, output: os.path.dirname(output.tsv),
-        tmpdir="$TMPDIR/coinr"
+        tmpdir="$TMPDIR/coinr",
     shell:
         """
         mkdir -p {params.tmpdir}
@@ -67,22 +71,23 @@ rule extract_coinr:
         rm -rf {params.tmpdir} 
         """
 
+
 rule format_coinr:
     output:
         fas="resources/coinr/{name}.qiime.fasta.gz",
-        tax="resources/coinr/{name}.taxonomy.tsv.gz"
+        tax="resources/coinr/{name}.taxonomy.tsv.gz",
     input:
         tsv=rules.extract_coinr.output.tsv,
         tax=rules.extract_coinr.output.tax,
         format_db=rules.download_coinr_src.output.format_db,
-        mkdb=rules.download_coinr_src.output.mkdb
+        mkdb=rules.download_coinr_src.output.mkdb,
     log:
-        "logs/coinr/format_coinr_{name}.log"
+        "logs/coinr/format_coinr_{name}.log",
     params:
         outdir=lambda wildcards, output: os.path.dirname(output.fas),
         tmpdir="$TMPDIR/format_coinr",
         out=lambda wildcards, output: os.path.basename(output.fas),
-        name="{name}"
+        name="{name}",
     shell:
         """
         mkdir -p {params.tmpdir}
@@ -98,17 +103,18 @@ rule format_coinr:
         rm -rf {params.tmpdir}
         """
 
+
 rule coinr2sintax:
     output:
-        fas="resources/coinr/{name}.sintax.fasta"
+        fas="resources/coinr/{name}.sintax.fasta",
     input:
         fas=rules.format_coinr.output.fas,
         tax=rules.format_coinr.output.tax,
     log:
-        "logs/coinr/coinr2sintax.{name}.log"
+        "logs/coinr/coinr2sintax.{name}.log",
     params:
         tmpdir="$TMPDIR/coinr2sintax",
-        src=srcdir("../scripts/coinr2sintax.py")
+        src=srcdir("../scripts/coinr2sintax.py"),
     shell:
         """
         mkdir -p {params.tmpdir}
@@ -119,4 +125,3 @@ rule coinr2sintax:
         mv {params.tmpdir}/sintax.fasta {output.fas}
         rm -rf {params.tmpdir}
         """
-

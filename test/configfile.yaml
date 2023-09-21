@@ -1,15 +1,21 @@
 # configuration file for project
 sample_list : "samples.csv"
+results_dir: "results"
 mappers:
   - "minimap2"
 fastp :
+  settings: ""
   complexity_threshold : 30
+  min_length: 30
 mappings_list : "mappings.csv"
+# Specify library type to map against genomes database
+lib_type_to_map: ["DNA"]
 mappings:
   genomes:
     target_species.subset:
-      fasta: "data/target_species.subset.fasta"
-      taxon_table: "data/taxon_table.subset.csv"
+      fasta: "data/target_species.fasta"
+      taxon_table: "data/taxon_table.csv"
+      to_include: "data/to_include.bed"
 
 blast:
   db: "/sw/data/blast_databases/nt"
@@ -18,7 +24,7 @@ blast:
 
 krakenuniq:
   db: "resources/krakenuniq"
-  exclude: [2,2157]
+  exclude: [2,2157,9604]
 
 bowtie2:
   threads: 10
@@ -32,4 +38,4 @@ sintax:
   cutoff: 0.8
   ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
   replace_ranks: ["domain=kingdom", "kingdom=phylum", "phylum=class", "class=order", "order=family", "family=genus", "genus=species", "species=bold_id"]
-  db: "data/sintaxdb.subset.fasta"
+  db: "data/sintaxdb.fasta"
