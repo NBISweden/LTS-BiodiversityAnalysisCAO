@@ -8,6 +8,7 @@ validate(config, "schemas/config.schema.yml")
 include: "scripts/common.py"
 include: "rules/mkcoinr.smk"
 
+
 localrules:
     parse_results,
     multiqc,
@@ -26,7 +27,9 @@ localrules:
 sample_df = pd.read_csv(
     config["sample_list"], comment="#", index_col=0, dtype={"sample_name": str}
 )
-sample_df.rename(columns={'fwd': 'fwd_libs', 'rev': 'rev_libs', 'type': 'lib_type'}, inplace=True)
+sample_df.rename(
+    columns={"fwd": "fwd_libs", "rev": "rev_libs", "type": "lib_type"}, inplace=True
+)
 samples = sample_df.to_dict(orient="index")
 
 # Read mapping list
@@ -49,6 +52,7 @@ rule all:
     input:
         all_output,
 
+
 def genome_map_input(wildcards):
     if "mappings" in config.keys():
         files = expand(
@@ -61,17 +65,19 @@ def genome_map_input(wildcards):
         files = []
     return files
 
+
 rule genome_map:
     """
     Performs the mapping against genomes and extraction of reads from bamfiles
     for all samples
     """
     input:
-        genome_map_input
+        genome_map_input,
+
 
 def genome_count_input(wildcards):
     if "mappings" in config.keys():
-        files=expand(
+        files = expand(
             "{results_dir}/genome_mappings/{ref}/summary_{f}.csv",
             results_dir=config["results_dir"],
             f=["raw_counts", "size_adjusted"],
@@ -82,12 +88,13 @@ def genome_count_input(wildcards):
         files = []
     return files
 
+
 rule genome_count:
     """
     Performs genome mapping + summarizing results into raw + size adjusted counts
     """
     input:
-        genome_count_input
+        genome_count_input,
 
 
 rule coi_map:
@@ -121,6 +128,7 @@ rule sintax:
             map_name=mappings.keys(),
             mapper=config["mappers"],
         ),
+
 
 ## PREPROCESSING ##
 
@@ -161,7 +169,7 @@ rule fastp:
         outR2="$TMPDIR/{sample}.fastp.R2.fastq.gz",
         complexity_threshold=config["fastp"]["complexity_threshold"],
         min_length=config["fastp"]["min_length"],
-        settings=config["fastp"]["settings"]
+        settings=config["fastp"]["settings"],
     shell:
         """
         exec &>{log.shell}
@@ -175,10 +183,11 @@ rule fastp:
         rm {params.tmpR1} {params.tmpR2}
         """
 
+
 rule fastp_dedup:
     output:
-        R1 = temp("{results_dir}/fastp/{sample}.fastp.dedup.R1.fastq.gz"),
-        R2 = temp("{results_dir}/fastp/{sample}.fastp.dedup.R2.fastq.gz"),
+        R1=temp("{results_dir}/fastp/{sample}.fastp.dedup.R1.fastq.gz"),
+        R2=temp("{results_dir}/fastp/{sample}.fastp.dedup.R2.fastq.gz"),
     input:
         R1=rules.fastp.output.R1,
         R2=rules.fastp.output.R2,
@@ -215,6 +224,7 @@ rule fastp_dedup:
         mv {params.outR2} {output.R2}
         rm {params.tmpR1} {params.tmpR2}        
         """
+
 
 rule multiqc:
     """
@@ -352,7 +362,9 @@ rule filter_bam:
         sam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam",
     input:
         bam=rules.bowtie2_map_genome.output.bam,
-        keep=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["to_include"],
+        keep=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "to_include"
+        ],
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log",
     conda:
@@ -400,22 +412,25 @@ rule get_reads:
         samtools fasta -n -o {output.fa} {input.bam} 2>{log}
         """
 
+
 # Subset cleaned reads
 # Checkpoint in case of contamination. For most, samples
 # subsetting should result in the same number of mapped
 # mapped reads
 
+
 rule subset_reads:
     output:
         fa="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/subset/{sample}.reads.fa",
     input:
-        fa=rules.get_reads.output.fa
+        fa=rules.get_reads.output.fa,
     conda:
         "envs/seqtk.yml"
     shell:
         """
-	    seqtk sample -s100 {input.fa} 50000 > {output.fa}
+        seqtk sample -s100 {input.fa} 50000 > {output.fa}
         """
+
 
 # Compare read counts and flag unusual files
 rule compare_counts:
@@ -423,13 +438,13 @@ rule compare_counts:
         f1=rules.get_reads.output.fa,
         f2=rules.subset_reads.output.fa,
     output:
-        txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/subset/{sample}.log.txt"
+        txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/subset/{sample}.log.txt",
     params:
         src=srcdir("scripts/flag_unusual_files.py"),
     shell:
         """
-		python {params.src} {input.f1} {input.f2} {output.txt}
-		"""
+        python {params.src} {input.f1} {input.f2} {output.txt}
+        """
 
 
 rule blast_reads:
@@ -439,7 +454,7 @@ rule blast_reads:
     output:
         txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt",
     input:
-        fa=rules.subset_reads.output.fa
+        fa=rules.subset_reads.output.fa,
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.log",
     params:
@@ -497,7 +512,9 @@ rule parse_results:
     input:
         reads=rules.blast_reads.output[0],
         sam=rules.filter_bam.output.sam,
-        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["taxon_table"],
+        tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "taxon_table"
+        ],
         taxdb=ancient(rules.download_taxdump.output[0]),
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
