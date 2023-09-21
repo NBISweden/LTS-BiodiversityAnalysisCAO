@@ -32,8 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Conda environment with Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@main
         with:
+          environment-file: environment.yml
           cache-env: true
       - name: Test run
         run: |
