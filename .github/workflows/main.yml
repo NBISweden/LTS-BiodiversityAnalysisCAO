@@ -37,6 +37,7 @@ jobs:
           cache-env: true
       - name: Test run
         run: |
+          mkdir -p test/data
           touch test/data/sample{1,2}.R{1,2}.fastq.gz test/data/target_species.fasta test/data/to_include.bed test/data/taxon_table.csv test/data/coidb.fasta
           snakemake --profile test -n
   
