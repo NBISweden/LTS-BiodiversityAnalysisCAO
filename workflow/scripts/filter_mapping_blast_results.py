@@ -25,9 +25,9 @@ import sys
 from ete3 import NCBITaxa
 
 # Infiles/outfiles
-blast_result = sys.argv[1]
-samfile = sys.argv[2]
-taxon_table = sys.argv[3]
+blast_result = sys.argv[1] # results/genome_mappings/target_species/bowtie2/SAS-Oden2021-DNA-011/blast_outs/SAS-Oden2021-DNA-011.result.txt
+samfile = sys.argv[2] # results/genome_mappings/target_species/bowtie2/SAS-Oden2021-DNA-011/SAS-Oden2021-DNA-011.filtered.sam
+taxon_table = sys.argv[3] # resources/genome_index/all_verts_whuman/taxon_table.csv
 tax_result = sys.argv[4]
 sp_result = sys.argv[5]
 
@@ -47,24 +47,21 @@ group_dic = {7898:'actinopterygii',7777:'chondrichthyes', 40674:'mammalia', 8782
 # Parse samfile
 # {read:[contig]}
 
+# Read sam file and store mapping of read -> contig
+# Also make a list of unique contigs in the sam file. This is
+# used to subset 'taxon_table.csv'
 sam_dic={}
+contig_set = set()
 fh1=open(samfile,"r")
 for l in fh1:
 	l = l.strip().split('\t')
 	r = str(l[0])
 	contig = str(l[2])
 	if r not in sam_dic.keys():
-		sam_dic[r] = list()
-		sam_dic[r].append(contig)
+		sam_dic[r] = [contig]
+		contig_set.add(contig)
+
 fh1.close()
-
-
-# Make a list of unique contigs in the sam file. This is
-# used to subset 'taxon_table.csv'
-contig_set = set()
-for i in sam_dic.values():
-	contig_set.add(i[0])
-
 
 # Load taxon table into a dictionary based on the contigs
 # in the unique list. {contig:[species,taxid]}
@@ -115,13 +112,17 @@ for x,y in taxon_dic.items():
 # blast results as values
 # {read1:[taxid1,taxi2,taxid3...]}
 
-blast_dic = {}
+blast_dic2 = {}
 
 fh3=open(blast_result,"r")
 for line in fh3:
 	line = line.strip().split('\t')
 	read = str(line[0])
 	taxid = int(line[9])
+	try:
+		blast_dic2[read].append(taxid)
+	except KeyError:
+		blast_dic2[read] = [taxid]
 	if read not in blast_dic.keys():
 		blast_dic[read] = list()
 		blast_dic[read].append(taxid)
@@ -129,6 +130,7 @@ for line in fh3:
 	else:
 		if taxid not in blast_dic[read]:
 			blast_dic[read].append(taxid)
+
 fh3.close()
 
 
