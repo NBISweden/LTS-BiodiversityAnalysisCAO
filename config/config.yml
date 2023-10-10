@@ -31,6 +31,13 @@ mappers:
 # 'min_len' is the minimum length of a read to be considered a match to the database
 mappings_list: "config/mappings.csv"
 
+# min_ani_cutoff is the minimum average nucleotide identity to consider a read a match to any marker gene database used
+# note that 1) this is only used as a first-pass filtering and 2) this parameter is only used by minimap2
+min_ani_cutoff: 80
+# min_align_len is the minimum length of a read to be considered a match to any marker gene database used
+# as for min_anicutoff, this is only used as a first-pass filtering and is only used by minimap2
+min_align_len: 30
+
 # lib_type_to_map specifies which library types to map to the target species genomes 
 # currently only DNA is supported
 lib_type_to_map: ["DNA"]
@@ -54,6 +61,11 @@ mappings:
       # the first is the sequence id, the second is the start of the region, and the third is the end of the region
       # for a genome of length 1000, the line "genome1 0 1000" would include the entire genome
       to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
+  marker_genes:
+    coinr:
+      fasta: "resources/coinr/COInr.sintax.fasta"
+      ani_cutoff: 90
+      min_len: 80
 
 # below are settings for blastn
 blast:
