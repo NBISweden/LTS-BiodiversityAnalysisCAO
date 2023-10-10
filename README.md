@@ -9,7 +9,7 @@ _marker gene taxonomic assignments_.
 
 In the genome mapping track preprocessed reads are mapped against a set of 
 target species genomes followed by a filtering step using nucleotide BLAST searches
-against the `nt` database. Read counts are collated and normalized counts per 
+against the `nt` database. Read counts are collated and normalized to counts per 
 million (CPM) reads.
 
 In the marker gene track preprocessed reads are first mapped against a database
@@ -17,7 +17,7 @@ of cytochrome oxidase subunit 1 (COI) reference sequences followed by filtering
 away reads with low percent identity match or short alignment length. In addition,
 a filtering step is performed to remove potential prokaryotic reads before
 the remaining reads are classified taxonomically using the sintax algorithm
-(implemented in `vsearch`) and the COI reference database.
+(implemented in `vsearch`) and a COI reference database.
 
 ## Installation
 
@@ -177,9 +177,11 @@ query.
 
 The part of the workflow that maps reads against a marker gene database (_e.g._ 
 the [cytochrome c oxidase subunit I](https://en.wikipedia.org/wiki/Cytochrome_c_oxidase_subunit_I)
-(COI) gene) requires a fasta file of reference marker genes (for initial 
-mapping), a KrakenUniq database (for filtering) and a SINTAX-formatted fasta 
-file (for taxonomic assignments).
+(COI) gene) requires:
+
+- a fasta file of reference marker genes (for initial mapping), 
+- a KrakenUniq database (for filtering) and 
+- a SINTAX-formatted fasta file (for taxonomic assignments)
 
 **Marker gene fasta file**
 The initial mapping of reads is done against a fasta file specified in a 
