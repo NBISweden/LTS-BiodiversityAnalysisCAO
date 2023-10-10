@@ -583,7 +583,7 @@ rule krakenuniq:
         ku="{results_dir}/logs/krakenuniq/{sample}.krakenuniq.log",
     envmodules:
         "bioinfo-tools",
-        "KrakenUniq",
+        "KrakenUniq/1.0.1",
     conda:
         "envs/krakenuniq.yml"
     threads: 20
@@ -872,7 +872,7 @@ rule krakenuniq_filter:
         extract="{results_dir}/logs/{map_name}/{mapper}/{sample}.krakenuniq.extract",
     envmodules:
         "bioinfo-tools",
-        "KrakenUniq",
+        "KrakenUniq/1.0.1",
     conda:
         "envs/krakenuniq.yml"
     threads: 4
