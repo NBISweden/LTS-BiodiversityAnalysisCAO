@@ -8,7 +8,7 @@ def all_output(wildcards):
         expand(
             "{results_dir}/mappings/{map_name}/{mapper}/{sample}_{seqtype}.fastq.gz",
             results_dir=config["results_dir"],
-            map_name=mappings.keys(),
+            map_name=config["mappings"]["marker_genes"].keys(),
             mapper=config["mappers"],
             sample=samples.keys(),
             seqtype=["fwd", "rev", "unp"],
@@ -27,7 +27,7 @@ def all_output(wildcards):
         output.extend(
             expand(
                 "{results_dir}/mappings/{map_name}/map_qc.html",
-                map_name=mappings.keys(),
+                map_name=config["mappings"]["marker_genes"].keys(),
                 results_dir=config["results_dir"],
             )
         )
@@ -40,7 +40,7 @@ def all_output(wildcards):
             expand(
                 "{results_dir}/mappings/{map_name}/{mapper}/{sample}.sintax.parsed.tsv",
                 results_dir=config["results_dir"],
-                map_name=mappings.keys(),
+                map_name=config["mappings"]["marker_genes"].keys(),
                 mapper=config["mappers"],
                 sample=samples.keys(),
             )
@@ -49,7 +49,7 @@ def all_output(wildcards):
             expand(
                 "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
                 results_dir=config["results_dir"],
-                map_name=mappings.keys(),
+                map_name=config["mappings"]["marker_genes"].keys(),
                 mapper=config["mappers"],
             )
         )
@@ -57,7 +57,7 @@ def all_output(wildcards):
             expand(
                 "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
                 results_dir=config["results_dir"],
-                map_name=mappings.keys(),
+                map_name=config["mappings"]["marker_genes"].keys(),
                 mapper=config["mappers"],
             )
         )

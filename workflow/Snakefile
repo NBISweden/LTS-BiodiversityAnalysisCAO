@@ -105,7 +105,7 @@ rule coi_map:
         expand(
             "{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz",
             results_dir=config["results_dir"],
-            map_name=mappings.keys(),
+            map_name=config["mappings"]["marker_genes"].keys(),
             mapper=config["mappers"],
             sample=samples.keys(),
         ),
@@ -119,13 +119,13 @@ rule sintax:
         expand(
             "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
             results_dir=config["results_dir"],
-            map_name=mappings.keys(),
+            map_name=config["mappings"]["marker_genes"].keys(),
             mapper=config["mappers"],
         ),
         expand(
             "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
             results_dir=config["results_dir"],
-            map_name=mappings.keys(),
+            map_name=config["mappings"]["marker_genes"].keys(),
             mapper=config["mappers"],
         ),
 
@@ -362,9 +362,7 @@ rule filter_bam:
         sam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam",
     input:
         bam=rules.bowtie2_map_genome.output.bam,
-        keep=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
-            "to_include"
-        ],
+        keep=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["to_include"],
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log",
     conda:
@@ -595,6 +593,7 @@ rule krakenuniq:
     params:
         tmpdir="$TMPDIR/{sample}.krakenuniq",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
+        # here preload_size is set to 75% of the available memory
         preload_size=lambda wildcards, threads: int(
             mem_allowed(wildcards, threads) * 0.75
         ),
@@ -616,7 +615,7 @@ rule krakenuniq:
 
 rule bowtie2_index:
     """
-    Generates bowtie2 index database of COI reference fasta
+    Generates bowtie2 index database of marker gene reference fasta
     """
     output:
         idx=expand(
@@ -624,7 +623,7 @@ rule bowtie2_index:
             suff=range(1, 5),
         ),
     input:
-        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
+        ref=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name]["fasta"]
     log:
         "resources/{map_name}/bowtie2/index.log",
     params:
@@ -686,12 +685,12 @@ rule bowtie2:
 
 rule minimap2_index:
     """
-    Generates minimap2 index for COI reference fasta
+    Generates minimap2 index for marker gene reference fasta
     """
     output:
         idx="resources/{map_name}/minimap2/index",
     input:
-        ref=lambda wildcards: mappings[wildcards.map_name]["reference"],
+        ref=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name]["fasta"],
     log:
         "resources/{map_name}/minimap2/index.log",
     threads: config["minimap2"]["threads"]
@@ -830,8 +829,8 @@ rule extract_reads:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
         tmp_bam="$TMPDIR/{map_name}.{mapper}.{sample}/namesorted.bam",
         outdir=lambda wildcards, output: os.path.dirname(output.fwd),
-        ani_cutoff=lambda wildcards: mappings[wildcards.map_name]["ani_cutoff"],
-        min_len=lambda wildcards: mappings[wildcards.map_name]["min_len"],
+        ani_cutoff=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name]["ani_cutoff"],
+        min_len=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name]["min_len"],
     conda:
         "envs/mapping.yml"
     resources:
