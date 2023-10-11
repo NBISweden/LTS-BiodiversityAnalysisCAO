@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
 from ete3 import NCBITaxa
-dbfile = "resources/taxonomy/taxonomy.sqlite"
-taxdump_file = "resources/taxonomy/taxdump.tar.gz"
+import sys
+dbfile = sys.argv[1]
 ncbi = NCBITaxa(dbfile=dbfile, taxdump_file=None)
