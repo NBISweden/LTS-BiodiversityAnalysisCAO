@@ -22,7 +22,7 @@ properties:
     description: "What library type should be mapped to genomes"
     default: ["DNA"]
     items:
-      enum: ["DNA", "RNA"]
+      enum: ["DNA"]
   min_ani_cutoff:
     type: integer
     description: "minimum ANI cutoff to use in first read filtering"
