@@ -492,11 +492,12 @@ rule download_taxdump:
         "resources/taxonomy/download_taxdump.log",
     conda:
         "envs/ete3.yml"
+    shadow: "minimal"
     params:
         src=srcdir("scripts/download_taxdump.py"),
     shell:
         """
-        python {params.src} {output[0]} 2> {log}
+        python {params.src} {output[0]} >{log} 2>&1
         """
 
 
@@ -737,10 +738,10 @@ rule minimap2:
         min_len=config["min_align_len"],
     conda:
         "envs/mapping.yml"
-    # envmodules:
-    #    "bioinfo-tools",
-    #    "minimap2/2.24-r1122",
-    #    "samtools",
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
+        "samtools",
     threads: 20
     resources:
         runtime=2 * 60,
