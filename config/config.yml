@@ -12,7 +12,8 @@ results_dir: "results"
 fastp:
   # the settings parameter here is a catch-all text string that will be passed to fastp
   # this can be used to pass any fastp parameter not specified below
-  settings: ""
+  # here we set the compression level to 9 by default to get the smallest possible output from fastp
+  settings: "-z 9"
   # complexity_threshold is the minimum complexity of a read to be retained
   # the complexity is defined as the percentage of base that is different from its next base (base[i] != base[i+1])
   complexity_threshold : 30

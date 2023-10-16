@@ -82,13 +82,13 @@ properties:
   fastp:
     type: object
     default:
-      settings: ""
+      settings: "-z 9"
       complexity_threshold: 30
       min_length: 30
     properties:
       settings:
         type: string
-        default: ""
+        default: "-z 9"
         description: "Extra settings to pass to fastp"
       complexity_threshold:
         type: integer
