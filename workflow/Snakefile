@@ -156,8 +156,6 @@ rule fastp:
         "fastp/0.23.2",
     conda:
         "envs/fastp.yml"
-    group:
-        "group1"
     resources:
         runtime=60,
         mem_mb=mem_allowed,
@@ -206,8 +204,6 @@ rule fastp_dedup:
         "fastp/0.23.2",
     conda:
         "envs/fastp.yml"
-    group:
-        "group1"
     threads: 10
     resources:
         runtime=60,
@@ -296,7 +292,8 @@ rule bowtie2_index_genome:
     threads: 20
     resources:
         runtime=48 * 60,
-        mem_mb=mem_allowed,
+        mem_mb=510000,
+        constraint="mem512GB"
     params:
         tmpdir="$TMPDIR/{ref}.bowtie2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
@@ -334,11 +331,10 @@ rule bowtie2_map_genome:
         "bioinfo-tools",
         "bowtie2/2.4.5",
         "samtools/1.14",
-    group:
-        "group1"
     resources:
         runtime=240,
-        mem_mb=mem_allowed,
+        mem_mb=510000,
+        constraint="mem512GB"
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
@@ -592,8 +588,6 @@ rule krakenuniq:
     resources:
         runtime=120,
         mem_mb=mem_allowed,
-    group:
-        "group1"
     params:
         tmpdir="$TMPDIR/{sample}.krakenuniq",
         db=lambda wildcards, input: os.path.dirname(input.db[0]),
@@ -753,8 +747,6 @@ rule minimap2:
     resources:
         runtime=2 * 60,
         mem_mb=mem_allowed,
-    group:
-        "group1"
     shell:
         """
         exec &>{log.log}
