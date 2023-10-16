@@ -798,6 +798,9 @@ rule map_qc:
         "{results_dir}/logs/multiqc/map_qc/{map_name}.log",
     conda:
         "envs/multiqc.yml"
+    envmodules:
+        "bioinfo-tools",
+        "MultiQC/1.12"
     params:
         input=lambda wildcards, input: "\n".join(input),
         tmpdir="$TMPDIR/{map_name}.map_qc",
