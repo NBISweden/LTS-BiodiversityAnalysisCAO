@@ -4,4 +4,4 @@ channels:
   - defaults
   - bioconda
 dependencies:
-  - vsearch=2.21.2
+  - vsearch=2.18.0
