@@ -917,11 +917,6 @@ rule run_sintax:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
         cutoff=config["sintax"]["cutoff"],
         out="$TMPDIR/{map_name}.{mapper}.{sample}/{sample}.sintax.tsv",
-    conda:
-        "envs/sintax.yml"
-    envmodules:
-        "bioinfo-tools",
-        "vsearch/2.18.0",
     resources:
         runtime=60,
         mem_mb=mem_allowed,

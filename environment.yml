@@ -11,5 +11,6 @@ dependencies:
   - biopython=1.81
   - ete3=3.1.2
   - coverm=0.6.1
+  - vsearch=2.21.2
   - tqdm
   - mamba
