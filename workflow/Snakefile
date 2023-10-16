@@ -362,7 +362,9 @@ rule filter_bam:
         sam="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.filtered.sam",
     input:
         bam=rules.bowtie2_map_genome.output.bam,
-        keep=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["to_include"],
+        keep=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
+            "to_include"
+        ],
     log:
         "{results_dir}/logs/genome_mappings/{ref}/bowtie2/{sample}/filter_bam.log",
     conda:
@@ -492,11 +494,13 @@ rule download_taxdump:
         "resources/taxonomy/download_taxdump.log",
     conda:
         "envs/ete3.yml"
+    shadow:
+        "minimal"
     params:
         src=srcdir("scripts/download_taxdump.py"),
     shell:
         """
-        python {params.src} {output[0]} 2> {log}
+        python {params.src} {output[0]} >{log} 2>&1
         """
 
 
@@ -623,7 +627,9 @@ rule bowtie2_index:
             suff=range(1, 5),
         ),
     input:
-        ref=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name]["fasta"]
+        ref=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name][
+            "fasta"
+        ],
     log:
         "resources/{map_name}/bowtie2/index.log",
     params:
@@ -690,7 +696,9 @@ rule minimap2_index:
     output:
         idx="resources/{map_name}/minimap2/index",
     input:
-        ref=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name]["fasta"],
+        ref=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name][
+            "fasta"
+        ],
     log:
         "resources/{map_name}/minimap2/index.log",
     threads: config["minimap2"]["threads"]
@@ -737,10 +745,10 @@ rule minimap2:
         min_len=config["min_align_len"],
     conda:
         "envs/mapping.yml"
-    # envmodules:
-    #    "bioinfo-tools",
-    #    "minimap2/2.24-r1122",
-    #    "samtools",
+    envmodules:
+        "bioinfo-tools",
+        "minimap2/2.24-r1122",
+        "samtools",
     threads: 20
     resources:
         runtime=2 * 60,
@@ -829,8 +837,12 @@ rule extract_reads:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}",
         tmp_bam="$TMPDIR/{map_name}.{mapper}.{sample}/namesorted.bam",
         outdir=lambda wildcards, output: os.path.dirname(output.fwd),
-        ani_cutoff=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name]["ani_cutoff"],
-        min_len=lambda wildcards: config["mappings"]["marker_genes"][wildcards.map_name]["min_len"],
+        ani_cutoff=lambda wildcards: config["mappings"]["marker_genes"][
+            wildcards.map_name
+        ]["ani_cutoff"],
+        min_len=lambda wildcards: config["mappings"]["marker_genes"][
+            wildcards.map_name
+        ]["min_len"],
     conda:
         "envs/mapping.yml"
     resources:
@@ -912,6 +924,9 @@ rule run_sintax:
         out="$TMPDIR/{map_name}.{mapper}.{sample}/{sample}.sintax.tsv",
     conda:
         "envs/sintax.yml"
+    envmodules:
+        "bioinfo-tools",
+        "vsearch/2.18.0",
     resources:
         runtime=60,
         mem_mb=mem_allowed,

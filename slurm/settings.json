@@ -1,5 +1,0 @@
-{
-    "SBATCH_DEFAULTS": "account=snic2022-5-464",
-    "CLUSTER_NAME": "",
-    "CLUSTER_CONFIG": ""
-}
