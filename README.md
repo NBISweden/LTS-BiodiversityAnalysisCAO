@@ -313,18 +313,15 @@ We strongly suggest that you use these profiles as they contain
 several useful Snakemake command line settings. 
 
 In order to use the `slurm` profile you should update the file 
-`slurm/settings.json` with your SLURM account id. Modify the file by opening 
-it in your favourite text editor:
-```json
-{
-    "SBATCH_DEFAULTS": "account=SLURM_ACCOUNT no-requeue exclusive",
-    "CLUSTER_NAME": "",
-}
+`slurm/config.yaml` with your SLURM account id. Modify the file by opening 
+it in your favourite text editor. Make sure that the `default-resources` entry has the correct SLURM account id.
+
+```yaml
+default-resources: "slurm_account=naiss2023-5-209"
 ```
 
-Change `SLURM_ACCOUNT` to match your SLURM account id.
+Now you can run the workflow as:
 
-When you run with the `slurm` profile the `-j` flag in the snakemake command 
-specifies number of jobs that can be run in parallel. If you specify 
-`--profile slurm` you can omit the `-j` flag since it is set automatically 
-by the profile (default: 500).
+```bash
+snakemake --profile slurm
+```
