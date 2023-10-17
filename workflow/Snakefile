@@ -411,8 +411,7 @@ rule get_reads:
 
 # Subset cleaned reads
 # Checkpoint in case of contamination. For most, samples
-# subsetting should result in the same number of mapped
-# mapped reads
+# subsetting should result in the same number of mapped and subset reads
 
 
 rule subset_reads:
@@ -709,6 +708,7 @@ rule minimap2_index:
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
+        "seqtk/1.2-r101",
         "samtools",
     resources:
         runtime=24 * 60,
@@ -717,7 +717,9 @@ rule minimap2_index:
         """
         exec &>{log}
         mkdir -p {params.tmpdir}
-        minimap2 -I {params.split_num}G -t {threads} -d {params.tmpdir}/index {input.ref}
+        seqtk rename {input.ref} > {params.tmpdir}/ref.fa
+        minimap2 -I {params.split_num}G -t {threads} -d {params.tmpdir}/index {params.tmpdir}/ref.fa
+        rm {params.tmpdir}/ref.fa
         mv {params.tmpdir}/* {params.outdir}
         rm -rf {params.tmpdir}        
         """
