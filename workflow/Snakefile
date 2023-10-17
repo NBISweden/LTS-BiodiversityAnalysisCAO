@@ -159,7 +159,7 @@ rule fastp:
     resources:
         runtime=60,
         mem_mb=mem_allowed,
-    threads: 20
+    threads: 10
     params:
         tmpR1="$TMPDIR/{sample}.R1.fastq.gz",
         tmpR2="$TMPDIR/{sample}.R2.fastq.gz",
