@@ -1004,6 +1004,9 @@ rule krona:
         "{results_dir}/logs/mappings/{map_name}/{mapper}/krona.log",
     conda:
         "envs/krona.yml"
+    envmodules:
+        "bioinfo-tools",
+        "Krona/2.8.1-20211222-d1479b3",
     params:
         input_string=krona_input_string,
     shell:
