@@ -292,8 +292,8 @@ rule bowtie2_index_genome:
     threads: 20
     resources:
         runtime=48 * 60,
-        mem_mb=510000,
-        constraint="mem512GB"
+        #mem_mb=510000,
+        #constraint="mem512GB"
     params:
         tmpdir="$TMPDIR/{ref}.bowtie2",
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
@@ -333,8 +333,8 @@ rule bowtie2_map_genome:
         "samtools/1.14",
     resources:
         runtime=240,
-        mem_mb=510000,
-        constraint="mem512GB"
+        #mem_mb=510000,
+        #constraint="mem512GB"
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
