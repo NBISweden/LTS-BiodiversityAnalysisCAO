@@ -26,6 +26,8 @@ import sys
 from timeit import default_timer as timer
 from ete3 import NCBITaxa
 import argparse
+from pathlib import Path
+import tempfile
 
 
 def write_results(sp_result, tax_result, species_counts, taxid_counts):
@@ -260,6 +262,12 @@ def main(args):
         40674: "mammalia",
         8782: "aves",
     }
+    if not args.taxdb:
+        taxdb = Path(tempfile.gettempdir()) / "taxonomy.sqlite"
+        taxdb.touch()
+        taxdb = str(taxdb)
+    else:
+        taxdb = args.taxdb
     ncbi = NCBITaxa(dbfile=args.taxdb)
     sam_dic = parse_samfile(args.samfile)
     contig_set = get_unique_contigs(sam_dic)

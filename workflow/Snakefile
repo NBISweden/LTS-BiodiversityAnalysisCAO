@@ -512,7 +512,6 @@ rule parse_results:
         tax=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
             "taxon_table"
         ],
-        taxdb=ancient(rules.download_taxdump.output[0]),
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
     conda:
@@ -523,7 +522,7 @@ rule parse_results:
         """
         python {params.src} --blast_result {input.reads} --samfile {input.sam} \
             --taxon_table {input.tax} --tax_result {output.taxid} \
-            --sp_result {output.species} --db {input.taxdb} >{log} 2>&1
+            --sp_result {output.species} >{log} 2>&1
         """
 
 
