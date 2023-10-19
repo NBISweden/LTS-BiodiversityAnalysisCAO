@@ -268,7 +268,7 @@ def main(args):
         taxdb = str(taxdb)
     else:
         taxdb = args.taxdb
-    ncbi = NCBITaxa(dbfile=args.taxdb)
+    ncbi = NCBITaxa(dbfile=taxdb)
     sam_dic = parse_samfile(args.samfile)
     contig_set = get_unique_contigs(sam_dic)
     taxon_dic = load_taxon_table(args.taxon_table, contig_set)
