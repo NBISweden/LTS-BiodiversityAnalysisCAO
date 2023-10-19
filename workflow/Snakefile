@@ -10,7 +10,6 @@ include: "rules/mkcoinr.smk"
 
 
 localrules:
-    parse_results,
     multiqc,
     parse_sintax,
     get_reads,
@@ -516,6 +515,8 @@ rule parse_results:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
     params:
         src=srcdir("scripts/filter_mapping_blast_results.py"),
+    resources:
+        runtime = 30,
     shell:
         """
         python {params.src} --blast_result {input.reads} --samfile {input.sam} \
