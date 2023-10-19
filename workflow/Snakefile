@@ -630,6 +630,9 @@ rule bowtie2_index:
         outdir=lambda wildcards, output: os.path.dirname(output[0]),
     conda:
         "envs/mapping.yml"
+    envmodules:
+        "bioinfo-tools",
+        "bowtie2/2.4.5",
     resources:
         runtime=10 * 60,
         mem_mb=mem_allowed,
@@ -667,6 +670,10 @@ rule bowtie2:
         idx=lambda wildcards, input: os.path.splitext(input.idx[0])[0].replace(".1", ""),
     conda:
         "envs/mapping.yml"
+    envmodules:
+        "bioinfo-tools",
+        "bowtie2/2.4.5",
+        "samtools/1.14",
     threads: config["bowtie2"]["threads"]
     resources:
         runtime=24 * 60,
@@ -709,7 +716,6 @@ rule minimap2_index:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
         "seqtk/1.2-r101",
-        "samtools",
     resources:
         runtime=24 * 60,
         mem_mb=mem_allowed,
@@ -750,7 +756,7 @@ rule minimap2:
     envmodules:
         "bioinfo-tools",
         "minimap2/2.24-r1122",
-        "samtools",
+        "samtools/1.14",
     threads: 20
     resources:
         runtime=2 * 60,
@@ -784,6 +790,9 @@ rule samtools_stats:
         tmp="$TMPDIR/{map_name}.{mapper}.{sample}.stats",
     conda:
         "envs/mapping.yml"
+    envmodules:
+        "bioinfo-tools",
+        "samtools/1.14",
     shell:
         """
         exec &>{log}
@@ -850,6 +859,9 @@ rule extract_reads:
         ]["min_len"],
     conda:
         "envs/mapping.yml"
+    envmodules:
+        "bioinfo-tools",
+        "samtools/1.14",
     resources:
         runtime=12 * 60,
         mem_mb=mem_allowed,
@@ -930,6 +942,8 @@ rule run_sintax:
     resources:
         runtime=60,
         mem_mb=mem_allowed,
+    conda:
+        "envs/sintax.yml"
     threads: 2
     shell:
         """
