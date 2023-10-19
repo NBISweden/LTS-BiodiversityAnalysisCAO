@@ -515,8 +515,10 @@ rule parse_results:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
     params:
         src=srcdir("scripts/filter_mapping_blast_results.py"),
+    threads: 2
     resources:
         runtime = 30,
+        mem_mb = mem_allowed,
     shell:
         """
         python {params.src} --blast_result {input.reads} --samfile {input.sam} \
