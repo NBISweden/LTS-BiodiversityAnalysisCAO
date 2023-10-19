@@ -295,7 +295,7 @@ if __name__ == "__main__":
         "--taxon_table", dest="taxon_table", help="Taxon table", required=True
     )
     parser.add_argument(
-        "--db", dest="taxdb", help="Taxon database", required=True
+        "--db", dest="taxdb", help="Taxon database",
     )
     parser.add_argument(
         "--sp_result",
