@@ -514,8 +514,6 @@ rule parse_results:
         ],
     log:
         "{results_dir}/logs/blast_reads/{ref}/{sample}.parse_results.log",
-    conda:
-        "envs/ete3.yml"
     params:
         src=srcdir("scripts/filter_mapping_blast_results.py"),
     shell:
