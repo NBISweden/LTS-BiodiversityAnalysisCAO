@@ -23,8 +23,8 @@ rule download_coinr_src:
         "logs/coinr/download_coinr_src.log",
     retries: 2
     params:
-        format_db_url="https://raw.githubusercontent.com/meglecz/mkCOInr/main/scripts/format_db.pl",
-        mkdb_url="https://raw.githubusercontent.com/meglecz/mkCOInr/main/scripts/mkdb.pm",
+        format_db_url="https://raw.githubusercontent.com/meglecz/mkCOInr/v.0.2.0/scripts/format_db.pl",
+        mkdb_url="https://raw.githubusercontent.com/meglecz/mkCOInr/v.0.2.0/scripts/mkdb.pm",
     shell:
         """
         exec &>{log}
