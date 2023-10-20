@@ -37,6 +37,39 @@ properties:
   mappings:
     type: object
     description: "Mapping parameters including reference path and taxa table"
+    properties:
+      genomes:
+        type: object
+        description: "Genome mapping parameters"
+        additionalProperties:
+          type: object
+          properties:
+            fasta:
+              type: string
+              description: "Path to fasta file for genome database"
+            taxon_table:
+              type: string
+              description: "Path to taxon table for genome database"
+            to_include:
+              type: string
+              description: "Path to bed file for filtering genome database"
+      marker_genes:
+        type: object
+        description: "Marker gene mapping parameters"
+        additionalProperties:
+          type: object
+          properties:
+            fasta:
+              type: string
+              description: "Path to fasta file for marker gene database"
+            ani_cutoff:
+              type: integer
+              description: "Minimum ANI cutoff to use in first read filtering"
+              default: 90
+            min_len:
+              type: integer
+              description: "Minimum aligned length to use in first read filtering"
+              default: 80
   krakenuniq:
     type: object
     default:
