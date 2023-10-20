@@ -6,6 +6,9 @@ format:
   confluence-html:
     toc: true
     embed-resources: true
+  html:
+    toc: true
+    embed-resources: true
 jupyter: 
   kernelspec: 
     display_name: Python 3
@@ -23,75 +26,75 @@ This document describes the main workflow for the analysis of the data from the 
 ```{dot}
 //| label: workflow
 //| fig-cap: "Workflow overview"
+//| fig-width: 4
+//| fig-height: 4
 
 digraph snakemake_dag {
     graph[bgcolor=white, margin=0];
     node[shape=box, style=rounded, fontname=sans,                 fontsize=10, penwidth=2];
     edge[penwidth=2, color=grey];
-	0[label = "all", color = "darkred", style="rounded"];
-	1[label = "extract_reads", color = "lightblue", style="rounded"];
-	2[label = "minimap2", color = "lightblue", style="rounded"];
-	3[label = "fastp", color = "grey", style="rounded"];
-	4[label = "minimap2_index", color = "lightblue", style="rounded"];
-	5[label = "coinr2sintax", color = "lightblue", style="rounded"];
-	6[label = "format_coinr", color = "lightblue", style="rounded"];
-	7[label = "extract_coinr", color = "lightblue", style="rounded"];
-	8[label = "download_coinr", color = "lightblue", style="rounded"];
-	9[label = "download_coinr_src", color = "lightblue", style="rounded"];
-	10[label = "map_qc", color = "lightblue", style="rounded"];
-	11[label = "samtools_stats", color = "lightblue", style="rounded"];
-	12[label = "parse_sintax", color = "lightblue", style="rounded"];
-	13[label = "run_sintax", color = "lightblue", style="rounded"];
-	14[label = "krakenuniq_filter", color = "lightblue", style="rounded"];
-	15[label = "krona", color = "lightblue", style="rounded"];
-	16[label = "collate_sintax", color = "lightblue", style="rounded"];
-	17[label = "parse_genome_counts", color = "lightgreen", style="rounded"];
-	18[label = "parse_results", color = "lightgreen", style="rounded"];
-	19[label = "blast_reads", color = "lightgreen", style="rounded"];
-	20[label = "subset_reads", color = "lightgreen", style="rounded"];
-	21[label = "get_reads", color = "lightgreen", style="rounded"];
-	22[label = "filter_bam", color = "lightgreen", style="rounded"];
-	23[label = "bowtie2_map_genome", color = "lightgreen", style="rounded"];
-	24[label = "bowtie2_index_genome", color = "lightgreen", style="rounded"];
-	25[label = "fastp_dedup", color = "lightgreen", style="rounded"];
-	26[label = "download_taxdump", color = "lightgreen", style="rounded"];
-	27[label = "multiqc", color = "grey", style="rounded"];
-	17 -> 0
-	10 -> 0
-	16 -> 0
-	15 -> 0
-	27 -> 0
-	1 -> 0
-	12 -> 0
-	2 -> 1
-	4 -> 2
-	3 -> 2
-	5 -> 4
-	6 -> 5
-	7 -> 6
-	9 -> 6
-	8 -> 7
-	11 -> 10
-	2 -> 11
-	13 -> 12
-	5 -> 13
-	14 -> 13
-	1 -> 14
-	12 -> 15
-	12 -> 16
-	18 -> 17
-	3 -> 17
-	26 -> 18
-	22 -> 18
-	19 -> 18
-	20 -> 19
-	21 -> 20
-	22 -> 21
-	23 -> 22
-	25 -> 23
-	24 -> 23
-	3 -> 25
-	3 -> 27
+    0[label = "all", color = "darkred", style="rounded"];
+    1[label = "extract_reads", color = "lightblue", style="rounded"];
+    2[label = "minimap2", color = "lightblue", style="rounded"];
+    3[label = "fastp", color = "grey", style="rounded"];
+    4[label = "minimap2_index", color = "lightblue", style="rounded"];
+    5[label = "coinr2sintax", color = "lightblue", style="rounded"];
+    6[label = "format_coinr", color = "lightblue", style="rounded"];
+    7[label = "extract_coinr", color = "lightblue", style="rounded"];
+    8[label = "download_coinr", color = "lightblue", style="rounded"];
+    9[label = "download_coinr_src", color = "lightblue", style="rounded"];
+    10[label = "map_qc", color = "lightblue", style="rounded"];
+    11[label = "samtools_stats", color = "lightblue", style="rounded"];
+    12[label = "parse_sintax", color = "lightblue", style="rounded"];
+    13[label = "run_sintax", color = "lightblue", style="rounded"];
+    14[label = "krakenuniq_filter", color = "lightblue", style="rounded"];
+    15[label = "krona", color = "lightblue", style="rounded"];
+    16[label = "collate_sintax", color = "lightblue", style="rounded"];
+    17[label = "parse_genome_counts", color = "lightgreen", style="rounded"];
+    18[label = "parse_results", color = "lightgreen", style="rounded"];
+    19[label = "blast_reads", color = "lightgreen", style="rounded"];
+    20[label = "subset_reads", color = "lightgreen", style="rounded"];
+    21[label = "get_reads", color = "lightgreen", style="rounded"];
+    22[label = "filter_bam", color = "lightgreen", style="rounded"];
+    23[label = "bowtie2_map_genome", color = "lightgreen", style="rounded"];
+    24[label = "bowtie2_index_genome", color = "lightgreen", style="rounded"];
+    25[label = "fastp_dedup", color = "lightgreen", style="rounded"];
+    27[label = "multiqc", color = "grey", style="rounded"];
+    17 -> 0
+    10 -> 0
+    16 -> 0
+    15 -> 0
+    27 -> 0
+    1 -> 0
+    12 -> 0
+    2 -> 1
+    4 -> 2
+    3 -> 2
+    5 -> 4
+    6 -> 5
+    7 -> 6
+    9 -> 6
+    8 -> 7
+    11 -> 10
+    2 -> 11
+    13 -> 12
+    5 -> 13
+    14 -> 13
+    1 -> 14
+    12 -> 15
+    12 -> 16
+    18 -> 17
+    3 -> 17
+    22 -> 18
+    19 -> 18
+    20 -> 19
+    21 -> 20
+    22 -> 21
+    23 -> 22
+    25 -> 23
+    24 -> 23
+    3 -> 25
+    3 -> 27
 }            
  
 ```
