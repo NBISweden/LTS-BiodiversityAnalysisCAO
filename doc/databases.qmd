@@ -347,3 +347,7 @@ chart = alt.Chart(target_taxa_sum).mark_boxplot().encode(
 chart
 ```
 :::
+
+# Conclusions
+
+The coinr database seems to be a better choice for this project. It has more sequences assigned to a resolved taxonomy at all ranks, and it also identifies more reads for the target taxa.
