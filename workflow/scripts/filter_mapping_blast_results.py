@@ -30,6 +30,32 @@ from pathlib import Path
 import tempfile
 
 
+def download_taxdump(tempdir):
+    """
+    Downloads the NCBI taxdump file to temporary directory
+    """
+    start = timer()
+    sys.stderr.write("Downloading taxdump file\n")
+    from urllib.request import urlretrieve
+    import hashlib
+    url="https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"
+    md5="https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz.md5"
+    filename = f"{tempdir}/taxdump.tar.gz"
+    filename_md5 = f"{tempdir}/taxdump.tar.gz.md5"
+    urlretrieve(url, filename)
+    urlretrieve(md5, filename_md5)
+    with open(filename_md5, "r") as fh:
+        md5sum = fh.read().strip().split()[0]
+    with open(filename, "rb") as fh:
+        md5sum_file = hashlib.md5(fh.read()).hexdigest()
+    if md5sum != md5sum_file:
+        raise ValueError(f"md5sum of downloaded {filename} ({md5sum_file}) does not match {url} ({md5sum})")
+    end = timer()
+    sys.stderr.write(f"{end - start} seconds to download taxdump file\n")
+    return filename
+    
+
+
 def write_results(sp_result, tax_result, species_counts, taxid_counts):
     # Write species level counts to outfile
     x = csv.writer(open(sp_result, "w"))
@@ -266,6 +292,9 @@ def main(args):
         taxdb = Path(tempfile.gettempdir()) / "taxonomy.sqlite"
         taxdb.touch()
         taxdb = str(taxdb)
+        # Download taxdump file
+        taxdump_file = download_taxdump(tempfile.gettempdir())
+        ncbi = NCBITaxa(dbfile=taxdb, taxdump_file=taxdump_file)
     else:
         taxdb = args.taxdb
     ncbi = NCBITaxa(dbfile=taxdb)
