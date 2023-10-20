@@ -13,10 +13,6 @@ properties:
     type: string
     description: "list of samples with fastq paths"
     default: "config/samples.csv"
-  mappings_list:
-    type: string
-    description: "list of references and map params"
-    default: "config/mappings.csv"
   lib_type_to_map:
     type: array
     description: "What library type should be mapped to genomes"
@@ -157,4 +153,3 @@ properties:
 
 required:
   - sample_list
-  - mappings_list
