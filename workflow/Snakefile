@@ -30,10 +30,6 @@ sample_df.rename(
 )
 samples = sample_df.to_dict(orient="index")
 
-# Read mapping list
-mapping_df = pd.read_csv(config["mappings_list"], index_col=0)
-mappings = mapping_df.to_dict(orient="index")
-
 
 wildcard_constraints:
     results_dir="\w+",
@@ -51,19 +47,6 @@ rule all:
         all_output,
 
 
-def genome_map_input(wildcards):
-    if "mappings" in config.keys():
-        files = expand(
-            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
-            results_dir=config["results_dir"],
-            sample=samples_to_genomemap(config, samples),
-            ref=config["mappings"]["genomes"].keys(),
-        )
-    else:
-        files = []
-    return files
-
-
 rule genome_map:
     """
     Performs the mapping against genomes and extraction of reads from bamfiles
@@ -71,20 +54,6 @@ rule genome_map:
     """
     input:
         genome_map_input,
-
-
-def genome_count_input(wildcards):
-    if "mappings" in config.keys():
-        files = expand(
-            "{results_dir}/genome_mappings/{ref}/summary_{f}.csv",
-            results_dir=config["results_dir"],
-            f=["raw_counts", "size_adjusted"],
-            t=["taxid", "species"],
-            ref=config["mappings"]["genomes"].keys(),
-        )
-    else:
-        files = []
-    return files
 
 
 rule genome_count:
@@ -100,13 +69,7 @@ rule coi_map:
     Runs the COI mapping + filtering with krakenuniq + extraction of reads
     """
     input:
-        expand(
-            "{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz",
-            results_dir=config["results_dir"],
-            map_name=config["mappings"]["marker_genes"].keys(),
-            mapper=config["mappers"],
-            sample=samples.keys(),
-        ),
+        coi_map_input,
 
 
 rule sintax:
@@ -114,18 +77,8 @@ rule sintax:
     Generate sintax output for all samples
     """
     input:
-        expand(
-            "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
-            results_dir=config["results_dir"],
-            map_name=config["mappings"]["marker_genes"].keys(),
-            mapper=config["mappers"],
-        ),
-        expand(
-            "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
-            results_dir=config["results_dir"],
-            map_name=config["mappings"]["marker_genes"].keys(),
-            mapper=config["mappers"],
-        ),
+        sintax_krona_input,
+        sintax_map_input,
 
 
 ## PREPROCESSING ##
@@ -329,7 +282,7 @@ rule bowtie2_map_genome:
         "bowtie2/2.4.5",
         "samtools/1.14",
     resources:
-        runtime=60*24*2,
+        runtime=60 * 24 * 2,
         mem_mb=mem_allowed,
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
@@ -480,11 +433,23 @@ rule parse_results:
     Parses the genome mapping results and outputs counts of taxids/species
     """
     output:
-        taxids=expand("{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_taxid_counts.txt", sample = sorted(samples_to_genomemap(config, samples))),
-        species=expand("{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_species_counts.txt", sample = sorted(samples_to_genomemap(config, samples))),
+        taxids=expand(
+            "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_taxid_counts.txt",
+            sample=sorted(samples_to_genomemap(config, samples)),
+        ),
+        species=expand(
+            "{{results_dir}}/genome_mappings/{{ref}}/counts/{sample}_species_counts.txt",
+            sample=sorted(samples_to_genomemap(config, samples)),
+        ),
     input:
-        blast_results=lambda wildcards: [f"{wildcards.results_dir}/genome_mappings/{wildcards.ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt" for sample in sorted(samples_to_genomemap(config, samples))],
-        samfiles=lambda wildcards: [f"{wildcards.results_dir}/genome_mappings/{wildcards.ref}/bowtie2/{sample}/{sample}.filtered.sam" for sample in sorted(samples_to_genomemap(config, samples))],
+        blast_results=lambda wildcards: [
+            f"{wildcards.results_dir}/genome_mappings/{wildcards.ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt"
+            for sample in sorted(samples_to_genomemap(config, samples))
+        ],
+        samfiles=lambda wildcards: [
+            f"{wildcards.results_dir}/genome_mappings/{wildcards.ref}/bowtie2/{sample}/{sample}.filtered.sam"
+            for sample in sorted(samples_to_genomemap(config, samples))
+        ],
         taxon_table=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
             "taxon_table"
         ],
@@ -738,7 +703,7 @@ rule minimap2:
         "samtools/1.14",
     threads: 20
     resources:
-        runtime=60*10,
+        runtime=60 * 10,
         mem_mb=mem_allowed,
     shell:
         """
