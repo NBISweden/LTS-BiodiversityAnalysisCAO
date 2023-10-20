@@ -156,7 +156,7 @@ rule fastp:
     conda:
         "envs/fastp.yml"
     resources:
-        runtime=60,
+        runtime=60*3,
         mem_mb=mem_allowed,
     threads: 10
     params:
@@ -205,7 +205,7 @@ rule fastp_dedup:
         "envs/fastp.yml"
     threads: 10
     resources:
-        runtime=60,
+        runtime=60*3,
         mem_mb=mem_allowed,
     shell:
         """
