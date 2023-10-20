@@ -24,13 +24,6 @@ fastp:
 # supported values are "bowtie2" and "minimap2"
 mappers:
   - "minimap2"
-# mappings_list should point to a comma separated that specifies which marker gene database to use for the COI mapping
-# the file should have the following columns: map_name, reference, ani_cutoff, min_len
-# 'map_name' can be any name you want to give the mapping, 
-# 'reference' is the path to the fasta file for the marker gene database
-# 'ani_cutoff' is the minimum average nucleotide identity to consider a read a match to the database
-# 'min_len' is the minimum length of a read to be considered a match to the database
-mappings_list: "config/mappings.csv"
 
 # min_ani_cutoff is the minimum average nucleotide identity to consider a read a match to any marker gene database used
 # note that 1) this is only used as a first-pass filtering and 2) this parameter is only used by minimap2
