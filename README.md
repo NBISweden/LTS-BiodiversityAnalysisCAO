@@ -42,6 +42,11 @@ conda activate biodivcao
 The workflow behaviour can be set using an external config file in `YAML` 
 format. A default config file is supplied under `config/config.yml`. 
 
+The two primary input parameters for the workflow are
+
+- a samples file listing the samples to be analysed and
+- a `mappings:` entry in the config file specifying which reference databases (genomes and/or marker genes) to use for mapping and taxonomic profiling
+
 ### Samples file
 The samples to be used in the workflow should be specified in a 
 comma-separated file that you point to with the config parameter 
@@ -76,10 +81,31 @@ The `lib_type` column specifies whether the sample has reads from `DNA` or
 `RNA` sequences. Currently, the workflow only maps `DNA` reads against the 
 reference genomes database in the [Target species track](#Target_species_track).
 
-### Installing resources
+### Specifying reference databases
 
-The workflow depends on some external resources that should be set up prior 
-to running analyses.
+The config entry `mappings:` specifies which reference databases to use. This config entry can have two types of nested entries:
+`genomes` or `marker_genes`. The `genomes` entry specifies the reference genomes database to use in the [Target species track](#Target_species_track) and the `marker_genes` entry specifies the reference marker genes database to use in the [Marker gene track](#Marker_gene_track). An example is shown below:
+
+```yaml
+mappings:
+  genomes:
+    target_species:
+      fasta: "resources/genome_index/all_verts_whuman/target_species.fasta"
+      taxon_table: "resources/genome_index/all_verts_whuman/taxon_table.csv"
+      to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
+  marker_genes:
+    coinr:
+      reference: "resources/coinr/COInr.fasta"
+      ani_cutoff: 90
+      min_len: 80
+```
+
+In this example, `target_species` is the name used for the genomes database. It has three parameters: `fasta`, `taxon_table` and `to_include`. The `fasta` parameter specifies the path to the fasta file with the reference genomes. The `taxon_table` parameter specifies the path to the taxon table file with contigs and their taxonomic information for genomes in the database. The `to_include` parameter specifies the path to the bed file with the contigs to the actual target species included in the reference genomes database. For more details see [Target species track](#Target_species_track).
+
+The `coinr` is the name used for the marker genes database in this example. It has three parameters: `reference`, `ani_cutoff` and `min_len`. The `reference` parameter specifies the path to the fasta file with the reference marker genes. The `ani_cutoff` parameter specifies the minimum average nucleotide identity (ANI) between a read and a reference marker gene to be kept for downstream analysis. The `min_len` parameter specifies the minimum alignment length between a read and a reference marker gene to be kept for downstream analysis. For more details see [Marker gene track](#Marker_gene_track).
+
+> **Note**
+Note that you can use any name for the databases. The names `target_species` and `coinr` are just examples. You can also include any number of database entries under the `genomes:` and `marker_genes:` entries. The workflow will run the mapping and taxonomic profiling for each database entry.
 
 #### Target species track
 The part of the workflow that maps reads to genomes of target species (_e.g_ 
@@ -317,7 +343,7 @@ In order to use the `slurm` profile you should update the file
 it in your favourite text editor. Make sure that the `default-resources` entry has the correct SLURM account id.
 
 ```yaml
-default-resources: "slurm_account=naiss2023-5-209"
+default-resources: "slurm_account=naiss2023-1-000"
 ```
 
 Now you can run the workflow as:
