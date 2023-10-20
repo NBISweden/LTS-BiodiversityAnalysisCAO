@@ -6,7 +6,14 @@ format:
   confluence-html:
     toc: true
     embed-resources: true
-bibliography: "bibliography.bib"
+jupyter: 
+  kernelspec: 
+    display_name: Python 3
+    language: python
+    name: conda-env-jupyter-py
+bibliography: bibliography.bib
+execute: 
+    enable: true
 ---
 
 # Overview
