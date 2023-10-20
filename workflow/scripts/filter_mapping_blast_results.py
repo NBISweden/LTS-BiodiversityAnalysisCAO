@@ -28,6 +28,7 @@ from ete3 import NCBITaxa
 import argparse
 from pathlib import Path
 import tempfile
+import pandas as pd
 
 
 def download_taxdump(tempdir):
@@ -38,8 +39,9 @@ def download_taxdump(tempdir):
     sys.stderr.write("Downloading taxdump file\n")
     from urllib.request import urlretrieve
     import hashlib
-    url="https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"
-    md5="https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz.md5"
+
+    url = "https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"
+    md5 = "https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz.md5"
     filename = f"{tempdir}/taxdump.tar.gz"
     filename_md5 = f"{tempdir}/taxdump.tar.gz.md5"
     urlretrieve(url, filename)
@@ -49,20 +51,23 @@ def download_taxdump(tempdir):
     with open(filename, "rb") as fh:
         md5sum_file = hashlib.md5(fh.read()).hexdigest()
     if md5sum != md5sum_file:
-        raise ValueError(f"md5sum of downloaded {filename} ({md5sum_file}) does not match {url} ({md5sum})")
+        raise ValueError(
+            f"md5sum of downloaded {filename} ({md5sum_file}) does not match {url} ({md5sum})"
+        )
     end = timer()
     sys.stderr.write(f"{end - start} seconds to download taxdump file\n")
     return filename
-    
 
 
 def write_results(sp_result, tax_result, species_counts, taxid_counts):
     # Write species level counts to outfile
+    sys.stderr.write(f"Writing species names counts to {sp_result}\n")
     x = csv.writer(open(sp_result, "w"))
     for key, value in species_counts.items():
         x.writerow([str(key), int(value)])
 
     # Write taxon level results to outfile
+    sys.stderr.write(f"Writing taxon id counts to {tax_result}\n")
     w = csv.writer(open(tax_result, "w"))
     for key, value in taxid_counts.items():
         w.writerow([int(key), int(value)])
@@ -72,7 +77,7 @@ def parse_samfile(samfile):
     """
     Parse samfile and return a dictionary with the read as key and the contig as value
     """
-    sys.stderr.write("Parsing samfile\n")
+    sys.stderr.write(f"Parsing samfile: {samfile}\n")
     start = timer()
     sam_dic = {}
     fh1 = open(samfile, "r")
@@ -103,28 +108,31 @@ def get_unique_contigs(sam_dic):
     return contig_set
 
 
-def load_taxon_table(taxon_table, contig_set):
-    """
-    Load taxon table into a dictionary based on the contigs in the unique list.
+def group_taxon_table(df):
+    return [df["species"].values[0], df["taxid"].values[0]]
 
-    contig:[species,taxid]}
+
+def load_taxon_table(taxon_table):
+    """
+    Load full taxon table and groups by contig
+
+    Returns a dataframe with contigs as index and a list ([species, taxid]) as values, e.g.:
+
+        contig
+    CAKALG010032195.1    [Helicolenus hilgendorfi, 143344]
+    OMLJ01038425.1           [Gadiculus argenteus, 185737]
+    OMPK01007635.1          [Myoxocephalus scorpius, 8097]
+    CAKAMO010023714.1          [Sebastes mentella, 394696]
+    OOFH01093767.1            [Merlangius merlangus, 8058]
+    dtype: object
     """
     start = timer()
     sys.stderr.write("Loading taxon table\n")
-    taxon_dic = {}
-    fh2 = open(taxon_table, "r")
-    for row in fh2:
-        row = row.strip().split(",")
-        ctg = str(row[0])
-        sp = str(row[1])
-        txid = int(row[2])
-        l = [sp, txid]
-        if ctg in contig_set:
-            taxon_dic[ctg] = l
-    fh2.close()
+    df = pd.read_csv(taxon_table, header=None, names=["contig", "species", "taxid"])
+    dfg = df.groupby("contig").apply(group_taxon_table)
     end = timer()
     sys.stderr.write(f"{end - start} seconds to load taxon table\n")
-    return taxon_dic
+    return dfg
 
 
 def add_taxinfo(sam_dic, taxon_dic, group_dic, ncbi):
@@ -172,7 +180,7 @@ def parse_blast_results(blast_result, taxid_col=9):
     {read1:[taxid1,taxi2,taxid3...]}
     """
     start = timer()
-    sys.stderr.write("Parsing blast results\n")
+    sys.stderr.write(f"Parsing blast results: {blast_result}\n")
     blast_dic = {}
     fh3 = open(blast_result, "r")
     for line in fh3:
@@ -280,6 +288,12 @@ def count_taxa(sam_dic, blast_group):
 
 
 def main(args):
+    assert (
+        len(args.samfile)
+        == len(args.blast_result)
+        == len(args.sp_result)
+        == len(args.tax_result)
+    ), "Number of samfiles, blast results, species results and taxid results must be the same"
     # Dictionary for birds, mammals, bony fish and
     # cartilagenous fish classification
     group_dic = {
@@ -297,50 +311,66 @@ def main(args):
         ncbi = NCBITaxa(dbfile=taxdb, taxdump_file=taxdump_file)
     else:
         taxdb = args.taxdb
-    ncbi = NCBITaxa(dbfile=taxdb)
-    sam_dic = parse_samfile(args.samfile)
-    contig_set = get_unique_contigs(sam_dic)
-    taxon_dic = load_taxon_table(args.taxon_table, contig_set)
-    sam_dic_tax = add_taxinfo(sam_dic, taxon_dic, group_dic, ncbi)
-    blast_dic = parse_blast_results(args.blast_result, args.taxid_col)
-    blast_dic = clean_blast_dict(blast_dic, sam_dic_tax)
-    blast_group = get_blast_group(blast_dic, group_dic, ncbi)
-    species_counts, taxid_counts = count_taxa(sam_dic_tax, blast_group)
-    write_results(args.sp_result, args.tax_result, species_counts, taxid_counts)
-
+        ncbi = NCBITaxa(dbfile=taxdb)
+    taxon_table = load_taxon_table(args.taxon_table)
+    for i, samfile in enumerate(args.samfile):
+        sys.stderr.write("\n")
+        blast_result = args.blast_result[i]
+        sp_result = args.sp_result[i]
+        tax_result = args.tax_result[i]
+        sys.stderr.write(f"Processing {samfile}\n")
+        sam_dic = parse_samfile(samfile)
+        contig_set = get_unique_contigs(sam_dic)
+        # Get subset of taxon_table as a dictionary
+        taxon_dic = taxon_table.loc[list(contig_set)].to_dict()
+        sam_dic_tax = add_taxinfo(sam_dic, taxon_dic, group_dic, ncbi)
+        blast_dic = parse_blast_results(blast_result, args.taxid_col)
+        blast_dic = clean_blast_dict(blast_dic, sam_dic_tax)
+        blast_group = get_blast_group(blast_dic, group_dic, ncbi)
+        species_counts, taxid_counts = count_taxa(sam_dic_tax, blast_group)
+        write_results(sp_result, tax_result, species_counts, taxid_counts)
+        
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--blast_result",
         dest="blast_result",
+        nargs="+",
         help="Blast results file",
         required=True,
     )
     parser.add_argument(
-        "--samfile", dest="samfile", help="Samfile", required=True
+        "--samfile",
+        dest="samfile",
+        help="Samfile",
+        required=True,
+        nargs="+",
     )
     parser.add_argument(
         "--taxon_table", dest="taxon_table", help="Taxon table", required=True
     )
     parser.add_argument(
-        "--db", dest="taxdb", help="Taxon database",
+        "--db",
+        dest="taxdb",
+        help="Taxon database",
     )
     parser.add_argument(
         "--sp_result",
         dest="sp_result",
+        nargs="+",
         help="Species level results",
         required=True,
     )
     parser.add_argument(
-        "--tax_result", dest="tax_result", help="Taxon id results", required=True
+        "--tax_result",
+        dest="tax_result",
+        nargs="+",
+        help="Taxon id results",
+        required=True,
     )
     parser.add_argument(
-        "--taxid_col",
-        dest="taxid_col",
-        type=int,
-        default=9,
-        help=argparse.SUPPRESS
+        "--taxid_col", dest="taxid_col", type=int, default=9, help=argparse.SUPPRESS
     )
     args = parser.parse_args()
     main(args)
