@@ -296,6 +296,10 @@ def main(args):
     ), "Number of samfiles, blast results, species results and taxid results must be the same"
     # Dictionary for birds, mammals, bony fish and
     # cartilagenous fish classification
+    samfiles = sorted(args.samfile)
+    blast_results = sorted(args.blast_result)
+    species_results = sorted(args.sp_result)
+    tax_results = sorted(args.tax_result)
     group_dic = {
         7898: "actinopterygii",
         7777: "chondrichthyes",
@@ -313,11 +317,11 @@ def main(args):
         taxdb = args.taxdb
         ncbi = NCBITaxa(dbfile=taxdb)
     taxon_table = load_taxon_table(args.taxon_table)
-    for i, samfile in enumerate(args.samfile):
+    for i, samfile in enumerate(samfiles):
         sys.stderr.write("\n")
-        blast_result = args.blast_result[i]
-        sp_result = args.sp_result[i]
-        tax_result = args.tax_result[i]
+        blast_result = blast_results[i]
+        sp_result = species_results[i]
+        tax_result = tax_results[i]
         sys.stderr.write(f"Processing {samfile}\n")
         sam_dic = parse_samfile(samfile)
         contig_set = get_unique_contigs(sam_dic)
@@ -329,7 +333,7 @@ def main(args):
         blast_group = get_blast_group(blast_dic, group_dic, ncbi)
         species_counts, taxid_counts = count_taxa(sam_dic_tax, blast_group)
         write_results(sp_result, tax_result, species_counts, taxid_counts)
-        
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
