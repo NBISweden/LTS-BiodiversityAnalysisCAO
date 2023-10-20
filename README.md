@@ -123,7 +123,8 @@ analysis. The `min_len` parameter specifies the minimum alignment length between
 a read and a reference marker gene to be kept for downstream analysis. For more
 details see [Marker gene track](#marker-gene-track).
 
-> **Note** Note that you can use any name for the databases. The names
+> **Note** 
+Note that you can use any name for the databases. The names
 `target_species` and `coinr` are just examples. You can also include any number
 of database entries under the `genomes:` and `marker_genes:` entries. The
 workflow will run the mapping and taxonomic profiling for each database entry.
