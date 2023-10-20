@@ -12,6 +12,7 @@ def samples_to_genomemap(config, samples):
     lib_types = config["lib_type_to_map"]
     return [x for x in samples.keys() if samples[x]["lib_type"] in lib_types]
 
+
 def all_output(wildcards):
     """
     Return all output files for given wildcards
@@ -80,6 +81,74 @@ def all_output(wildcards):
         expand("{results_dir}/multiqc/multiqc.html", results_dir=config["results_dir"])
     )
     return output
+
+
+def sintax_krona_input(wildcards):
+    if "mappings" in config.keys():
+        files = expand(
+            "{results_dir}/mappings/{map_name}/{mapper}/krona/krona.html",
+            results_dir=config["results_dir"],
+            map_name=config["mappings"]["marker_genes"].keys(),
+            mapper=config["mappers"],
+        )
+    else:
+        files = []
+    return files
+
+
+def sintax_map_input(wildcards):
+    if "mappings" in config.keys():
+        files = expand(
+            "{results_dir}/mappings/counts/sintax.{map_name}.{mapper}.tsv",
+            results_dir=config["results_dir"],
+            map_name=config["mappings"]["marker_genes"].keys(),
+            mapper=config["mappers"],
+            sample=samples.keys(),
+        )
+    else:
+        files = []
+    return files
+
+
+def coi_map_input(wildcards):
+    if "mappings" in config.keys():
+        files = expand(
+            "{results_dir}/mappings/{map_name}/{mapper}/{sample}.krakenuniq.filtered.fastq.gz",
+            results_dir=config["results_dir"],
+            map_name=config["mappings"]["marker_genes"].keys(),
+            mapper=config["mappers"],
+            sample=samples.keys(),
+        )
+    else:
+        files = []
+    return files
+
+
+def genome_count_input(wildcards):
+    if "mappings" in config.keys():
+        files = expand(
+            "{results_dir}/genome_mappings/{ref}/summary_{f}.csv",
+            results_dir=config["results_dir"],
+            f=["raw_counts", "size_adjusted"],
+            t=["taxid", "species"],
+            ref=config["mappings"]["genomes"].keys(),
+        )
+    else:
+        files = []
+    return files
+
+
+def genome_map_input(wildcards):
+    if "mappings" in config.keys():
+        files = expand(
+            "{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/{sample}.reads.fa",
+            results_dir=config["results_dir"],
+            sample=samples_to_genomemap(config, samples),
+            ref=config["mappings"]["genomes"].keys(),
+        )
+    else:
+        files = []
+    return files
 
 
 def mem_allowed(wildcards, threads):
