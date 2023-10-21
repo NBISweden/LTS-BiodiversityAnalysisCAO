@@ -283,10 +283,11 @@ rule bowtie2_map_genome:
         "samtools/1.14",
     resources:
         runtime=60 * 24 * 2,
-        mem_mb=mem_allowed,
+        mem_mb=16*16000,
+        partition="node",
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
-    threads: 20
+    threads: 16
     shell:
         """
         exec &>{log.log}
