@@ -847,9 +847,9 @@ rule krakenuniq_filter:
         "KrakenUniq/1.0.1",
     conda:
         "envs/krakenuniq.yml"
-    threads: 4
+    threads: 10
     resources:
-        runtime=120,
+        runtime=60 * 24,
         mem_mb=mem_allowed,
     params:
         tmpdir="$TMPDIR/{map_name}.{mapper}.{sample}.fu",
