@@ -284,10 +284,10 @@ rule bowtie2_map_genome:
     resources:
         runtime=60 * 24 * 2,
         mem_mb=16*16000,
-        partition="node",
+        constraint="mem256GB",
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
-    threads: 16
+    threads: 20
     shell:
         """
         exec &>{log.log}
