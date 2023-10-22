@@ -18,6 +18,7 @@ localrules:
     parse_genome_counts,
     samtools_stats,
     krona,
+    subset_reads,
     all,
 
 
