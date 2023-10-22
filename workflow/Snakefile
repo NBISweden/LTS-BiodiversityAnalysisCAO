@@ -370,6 +370,9 @@ rule subset_reads:
         fa="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/subset/{sample}.reads.fa",
     input:
         fa=rules.get_reads.output.fa,
+    envmodules:
+        "bioinfo-tools",
+        "seqtk/1.2-r101",
     conda:
         "envs/seqtk.yml"
     shell:
