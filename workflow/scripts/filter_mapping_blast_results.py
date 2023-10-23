@@ -306,6 +306,10 @@ def main(args):
         40674: "mammalia",
         8782: "aves",
     }
+    if not args.taxdump:
+        taxdump_file = download_taxdump(tempfile.gettempdir())
+    else:
+        taxdump_file = args.taxdump
     if not args.taxdb:
         taxdb = Path(tempfile.gettempdir()) / "taxonomy.sqlite"
         taxdb.touch()
@@ -358,6 +362,11 @@ if __name__ == "__main__":
         "--db",
         dest="taxdb",
         help="Taxon database",
+    )
+    parser.add_argument(
+        "--taxdump",
+        dest="taxdump",
+        help="Path to NCBI taxdump.tar.gz file",
     )
     parser.add_argument(
         "--sp_result",
