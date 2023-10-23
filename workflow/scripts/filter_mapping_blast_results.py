@@ -306,16 +306,15 @@ def main(args):
         40674: "mammalia",
         8782: "aves",
     }
-    if not args.taxdump:
-        taxdump_file = download_taxdump(tempfile.gettempdir())
-    else:
-        taxdump_file = args.taxdump
     if not args.taxdb:
         taxdb = Path(tempfile.gettempdir()) / "taxonomy.sqlite"
         taxdb.touch()
         taxdb = str(taxdb)
-        # Download taxdump file
-        taxdump_file = download_taxdump(tempfile.gettempdir())
+        if not args.taxdump:
+            # Download taxdump file to temporary directory
+            taxdump_file = download_taxdump(tempfile.gettempdir())
+        else:
+            taxdump_file = args.taxdump
         ncbi = NCBITaxa(dbfile=taxdb, taxdump_file=taxdump_file)
     else:
         taxdb = args.taxdb
