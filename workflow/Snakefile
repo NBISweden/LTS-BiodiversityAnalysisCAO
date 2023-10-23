@@ -402,6 +402,7 @@ rule blast_reads:
     """
     output:
         txt="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.result.txt",
+        timestamp="{results_dir}/genome_mappings/{ref}/bowtie2/{sample}/blast_outs/{sample}.timestamp",
     input:
         fa=rules.subset_reads.output.fa,
     log:
@@ -423,6 +424,7 @@ rule blast_reads:
         mem_mb=mem_allowed,
     shell:
         """
+        date '+%d-%m-%Y %T' > {output.timestamp}
         mkdir -p $TMPDIR
         blastn -num_threads {threads} -query {input.fa} \
         -db {params.db} -evalue {params.evalue} -max_target_seqs {params.max_target} -outfmt \
@@ -432,9 +434,21 @@ rule blast_reads:
         mv {params.tmp_out} {output.txt}
         """
 
+rule download_taxdump:
+    output:
+        taxdump="resources/taxonomy/taxdump.tar.gz",
+    params:
+        dirname = lambda wildcards, output: os.path.dirname(output.taxdump),
+    run:
+        from workflow.scripts.filter_mapping_blast_results import download_taxdump
+        download_taxdump(params.dirname)
+        # output timestamp to file
+        with open(f"{params.dirname}/taxdump.timestamp", "w") as f:
+            f.write(str(datetime.datetime.now()))
+
 
 rule parse_results:
-    """
+    """ 
     Parses the genome mapping results and outputs counts of taxids/species
     """
     output:
@@ -458,6 +472,7 @@ rule parse_results:
         taxon_table=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
             "taxon_table"
         ],
+        rules.download_taxdump.output.taxdump,
     log:
         "{results_dir}/logs/blast_reads/{ref}/parse_results.log",
     params:
