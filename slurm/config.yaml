@@ -1,4 +1,4 @@
-default-resources: "slurm_account=naiss2023-5-209"
+default-resources: "slurm_account=snic2022-5-464"
 #default-resources: "mem_mb=6400"
 slurm: "True"
 rerun-triggers: "mtime"
