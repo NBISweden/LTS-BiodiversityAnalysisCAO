@@ -19,6 +19,7 @@ localrules:
     samtools_stats,
     krona,
     subset_reads,
+    download_taxdump,
     all,
 
 
@@ -437,13 +438,17 @@ rule blast_reads:
 rule download_taxdump:
     output:
         taxdump="resources/taxonomy/taxdump.tar.gz",
+        timestamp="resources/taxonomy/taxdump.timestamp",
+    log:
+        "resources/taxonomy/download.log"
     params:
-        dirname = lambda wildcards, output: os.path.dirname(output.taxdump),
+        dirname=lambda wildcards, output: os.path.dirname(output.taxdump)
     run:
         from workflow.scripts.filter_mapping_blast_results import download_taxdump
+        import datetime
         download_taxdump(params.dirname)
         # output timestamp to file
-        with open(f"{params.dirname}/taxdump.timestamp", "w") as f:
+        with open(output.timestamp, "w") as f:
             f.write(str(datetime.datetime.now()))
 
 
@@ -472,7 +477,7 @@ rule parse_results:
         taxon_table=lambda wildcards: config["mappings"]["genomes"][wildcards.ref][
             "taxon_table"
         ],
-        rules.download_taxdump.output.taxdump,
+        taxdump=rules.download_taxdump.output.taxdump,
     log:
         "{results_dir}/logs/blast_reads/{ref}/parse_results.log",
     params:
@@ -485,7 +490,7 @@ rule parse_results:
         """
         python {params.src} --blast_result {input.blast_results} --samfile {input.samfiles} \
             --taxon_table {input.taxon_table} --tax_result {output.taxids} \
-            --sp_result {output.species} >{log} 2>&1
+            --sp_result {output.species} --taxdump {input.taxdump} >{log} 2>&1
         """
 
 
