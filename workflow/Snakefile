@@ -443,6 +443,7 @@ rule download_taxdump:
         "resources/taxonomy/download.log"
     params:
         dirname=lambda wildcards, output: os.path.dirname(output.taxdump)
+    retries: 3
     run:
         from workflow.scripts.filter_mapping_blast_results import download_taxdump
         import datetime
