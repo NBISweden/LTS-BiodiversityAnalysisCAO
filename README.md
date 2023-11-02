@@ -100,7 +100,7 @@ mappings:
       to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
   marker_genes:
     coinr:
-      reference: "resources/coinr/COInr.fasta"
+      fasta: "resources/coinr/COInr.fasta"
       ani_cutoff: 90
       min_len: 80
 ```
@@ -237,12 +237,12 @@ fasta file with reference sequences. The relevant config parameters are:
 mappings:
   marker_genes:
     coinr:
-      reference: "resources/coinr/COInr.fasta"
+      fasta: "resources/coinr/COInr.fasta"
       ani_cutoff: 90
       min_len: 80
 ```
 
-The `reference` parameter specifies the path to the fasta file with the
+The `fasta` parameter specifies the path to the fasta file with the
 reference marker genes. The marker gene track of the workflow starts with
 mapping preprocessed reads against sequences in this fasta file. The
 `ani_cutoff` and `min_len` parameters specify the minimum average nucleotide
@@ -290,11 +290,20 @@ is supplied and formatted in a specific way. You may use the same fasta file as
 in the marker gene mapping step (described above) as long as it conforms to the
 format required by `sintax` (see below).
 
-The fasta file used by sintax should have taxonomic information in sequence
-headers formatted as in the example below:
+The workflow includes steps to download a COI reference database using a
+non-redundant database created using the
+[mkCOInr](https://github.com/meglecz/mkCOInr/) tool. To use this database,
+simply set the `fasta:` parameter under your marker gene database entry to
+`resources/coinr/COInr.sintax.fasta`. Also use the same setting for `db:`
+parameter under the sintax config entry (see below). The workflow will then
+automatically download the database and format it for use with `sintax`.
+
+If you want to use a custom database for the sintax classifications the fasta
+file should have taxonomic information in sequence headers formatted as in the
+example below:
 
 ```bash
->KJ592702_1;tax=k:Eukaryota_2759_kingdom,p:Rhodophyta_2763,c:Florideophyceae_2806,o:Hapalidiales_1705611,f:Mesophyllumaceae_2784734,g:Mesophyllum_48973,s:Mesophyllum_lichenoides_1000564
+>KJ592702_1;tax=k:Eukaryota,p:Rhodophyta,c:Florideophyceae,o:Hapalidiales,f:Mesophyllumaceae,g:Mesophyllum,s:Mesophyllum_lichenoides
 ```
 
 This format is required by the sintax algorithm and allows sequences to be
@@ -307,8 +316,7 @@ config entry:
 ```yaml
 sintax:
   cutoff: 0.8
-  ranks: [ "kingdom", "phylum", "class", "order", "family", "genus", "species" ]
-  replace_ranks: [ "kingdom=kingdom", "phylum=phylum", "class=class", "order=order", "family=family", "genus=genus", "species=species"]
+  ranks: ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
   db: "resources/coinr/COInr.sintax.fasta"
 ```
 
@@ -317,23 +325,8 @@ assign taxonomy to sequences (see the original [usearch
 docs](https://drive5.com/usearch/manual/tax_conf.html)).
 
 The `ranks` parameter specifies which ranks to use in the taxonomic
-classification output. We suggest to use the same ranks as those given in the
+classification output. Make sure to use the same ranks as those given in the
 fasta headers of the SINTAX fasta file.
-
-The `replace_ranks` parameter allows you to remap ranks from those specified in
-the SINTAX fasta headers. For example if you have:
-
-```
->PLYAO072-20;tax=d:Animalia,k:Arthropoda,p:Insecta,c:Lepidoptera,o:Gelechiidae,f:Stegasta,g:Stegasta bosqueella,s:BOLD:AAA1027
-```
-
-in your fasta file but want to rename the shorthand `s` value to `bold_id` in
-the parsed sintax output you can use:
-
-```yaml
-sintax:
-  replace_ranks: ["domain=kingdom", "kingdom=phylum", "phylum=class", "class=order", "order=family", "family=genus", "genus=species", "species=bold_id"]
-```
 
 ## Running the workflow
 
