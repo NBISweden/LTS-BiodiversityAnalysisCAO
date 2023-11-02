@@ -95,7 +95,7 @@ rule format_coinr:
         gunzip -c {input.tsv} > {params.tmpdir}/seqs.tsv
         perl {input.format_db} -tsv {params.tmpdir}/seqs.tsv \
             -taxonomy {params.tmpdir}/tax.tsv -outdir {params.tmpdir} \
-            -out {params.name} -outfmt qiime > {log} 2>&1
+            -out {params.name} -outfmt full > {log} 2>&1
         gzip {params.tmpdir}/{params.name}_trainseq.fasta 
         mv {params.tmpdir}/{params.name}_trainseq.fasta.gz {output.fas}
         cat {params.tmpdir}/{params.name}_taxon.txt | tr ' ' '\t' | gzip -c > {params.tmpdir}/tax.tsv.gz 
