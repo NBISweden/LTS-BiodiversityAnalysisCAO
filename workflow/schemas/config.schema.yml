@@ -155,7 +155,7 @@ properties:
     type: object
     default:
       cutoff: 0.8
-      ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
+      ranks: ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
       replace_ranks: []
     properties:
       cutoff:
