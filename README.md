@@ -98,6 +98,7 @@ mappings:
       fasta: "resources/genome_index/all_verts_whuman/target_species.fasta"
       taxon_table: "resources/genome_index/all_verts_whuman/taxon_table.csv"
       to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
+      mapq: 30
   marker_genes:
     coinr:
       fasta: "resources/coinr/COInr.fasta"
@@ -111,17 +112,19 @@ parameter specifies the path to the fasta file with the reference genomes. The
 `taxon_table` parameter specifies the path to the taxon table file with contigs
 and their taxonomic information for genomes in the database. The `to_include`
 parameter specifies the path to the bed file with the contigs to the actual
-target species included in the reference genomes database. For more details see
-[Target species track](#target-species-track).
+target species included in the reference genomes database. Finally, the `mapq`
+parameter is the minimum map quality required for reads at the mapping stage of
+the workflow. For more details see [Target species track](#target-species-track).
 
-The `coinr` is the name used for the marker genes database in this example. It
-has three parameters: `reference`, `ani_cutoff` and `min_len`. The `reference`
-parameter specifies the path to the fasta file with the reference marker genes.
-The `ani_cutoff` parameter specifies the minimum average nucleotide identity
-(ANI) between a read and a reference marker gene to be kept for downstream
-analysis. The `min_len` parameter specifies the minimum alignment length between
-a read and a reference marker gene to be kept for downstream analysis. For more
-details see [Marker gene track](#marker-gene-track).
+For the marker gene track, the example above specifies a marker gene database
+named `coinr`. Each database entry has three parameters: `fasta`,
+`ani_cutoff` and `min_len`. The `fasta` parameter specifies the path to the
+fasta file with the reference marker genes. The `ani_cutoff` parameter specifies
+the minimum average nucleotide identity (ANI) between a read and a reference
+marker gene to be kept for downstream analysis. The `min_len` parameter
+specifies the minimum alignment length between a read and a reference marker
+gene to be kept for downstream analysis. For more details see [Marker gene
+track](#marker-gene-track).
 
 > **Note** 
 Note that you can use any name for the databases. The names
@@ -167,7 +170,7 @@ gtgggggtggaggaaggGTGGAGACCTAGAGGGTGATGGGGGTGAGAGGGAGGtcgagagagaggaagggttaGTAAATg
 gttattcacacacacattcacacactgatggcagaggctgccatgcaaggtgccaacctgcccat
 ```
 
-_taxon_table_
+_taxon\_table_
 ```
 AESE010000001.1,Leucoraja erinacea,7782
 CAKAOH010043426.1,Sebastiscus tertius,1472224
@@ -179,12 +182,15 @@ alignments to human and herring. That is, the bedfile contains all of the
 contigs that are included in the target species genomes database except for
 human and herring.
 
-_to_include_
+_to\_include_
 ```
 KB228878.1	0	17703537
 KB228879.1	0	17817800
 KB228880.1	0	9835568
 ```
+
+_mapq_: The `mapq` parameter specifies the minimum map quality required for
+reads to be kept for downstream analysis.
 
 The target species genome database can be built in any way you like, as long as
 it conforms to the file format outlined here. A GitHub repository with code to
