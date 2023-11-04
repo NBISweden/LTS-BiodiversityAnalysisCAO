@@ -1,0 +1,123 @@
+---
+title: Workflow description
+author: "John Sundh"
+date: last-modified
+format: 
+  confluence-html:
+    toc: true
+    embed-resources: true
+  html:
+    toc: true
+    embed-resources: true
+jupyter: 
+  kernelspec: 
+    display_name: Python 3
+    language: python
+    name: conda-env-jupyter-py
+bibliography: bibliography.bib
+execute: 
+    enable: true
+---
+
+# Overview
+
+This document describes the main workflow for the analysis of the data from the Central Arctic Ocean. The workflow is written in Snakemake and is available at [github.com/NBISweden/LTS-BiodiversityAnalysisCAO](https://github.com/NBISweden/LTS-BiodiversityAnalysisCAO).
+
+```{dot}
+//| label: workflow
+//| fig-cap: "Workflow overview"
+//| fig-width: 4
+//| fig-height: 4
+
+digraph snakemake_dag {
+    graph[bgcolor=white, margin=0];
+    node[shape=box, style=rounded, fontname=sans,                 fontsize=10, penwidth=2];
+    edge[penwidth=2, color=grey];
+    0[label = "all", color = "darkred", style="rounded"];
+    1[label = "extract_reads", color = "lightblue", style="rounded"];
+    2[label = "minimap2", color = "lightblue", style="rounded"];
+    3[label = "fastp", color = "grey", style="rounded"];
+    4[label = "minimap2_index", color = "lightblue", style="rounded"];
+    5[label = "coinr2sintax", color = "lightblue", style="rounded"];
+    6[label = "format_coinr", color = "lightblue", style="rounded"];
+    7[label = "extract_coinr", color = "lightblue", style="rounded"];
+    8[label = "download_coinr", color = "lightblue", style="rounded"];
+    9[label = "download_coinr_src", color = "lightblue", style="rounded"];
+    10[label = "map_qc", color = "lightblue", style="rounded"];
+    11[label = "samtools_stats", color = "lightblue", style="rounded"];
+    12[label = "parse_sintax", color = "lightblue", style="rounded"];
+    13[label = "run_sintax", color = "lightblue", style="rounded"];
+    14[label = "krakenuniq_filter", color = "lightblue", style="rounded"];
+    15[label = "krona", color = "lightblue", style="rounded"];
+    16[label = "collate_sintax", color = "lightblue", style="rounded"];
+    17[label = "parse_genome_counts", color = "lightgreen", style="rounded"];
+    18[label = "parse_results", color = "lightgreen", style="rounded"];
+    19[label = "blast_reads", color = "lightgreen", style="rounded"];
+    20[label = "subset_reads", color = "lightgreen", style="rounded"];
+    21[label = "get_reads", color = "lightgreen", style="rounded"];
+    22[label = "filter_bam", color = "lightgreen", style="rounded"];
+    23[label = "bowtie2_map_genome", color = "lightgreen", style="rounded"];
+    24[label = "bowtie2_index_genome", color = "lightgreen", style="rounded"];
+    25[label = "fastp_dedup", color = "lightgreen", style="rounded"];
+    27[label = "multiqc", color = "grey", style="rounded"];
+    17 -> 0
+    10 -> 0
+    16 -> 0
+    15 -> 0
+    27 -> 0
+    1 -> 0
+    12 -> 0
+    2 -> 1
+    4 -> 2
+    3 -> 2
+    5 -> 4
+    6 -> 5
+    7 -> 6
+    9 -> 6
+    8 -> 7
+    11 -> 10
+    2 -> 11
+    13 -> 12
+    5 -> 13
+    14 -> 13
+    1 -> 14
+    12 -> 15
+    12 -> 16
+    18 -> 17
+    3 -> 17
+    22 -> 18
+    19 -> 18
+    20 -> 19
+    21 -> 20
+    22 -> 21
+    23 -> 22
+    25 -> 23
+    24 -> 23
+    3 -> 25
+    3 -> 27
+}            
+ 
+```
+
+The workflow is divided into three main parts:
+
+1. Preprocessing of raw data (grey nodes in figure above)
+2. Genome mapping (light green)
+3. Marker gene mapping and taxonomic assignment (light blue)
+
+## Preprocessing of raw data
+
+The raw reads are first preprocessed using [fastp](https://github.com/OpenGene/fastp) (v. 0.23.2) [@chen2018fastp]. In this step adapters are automatically detected and trimmed. Low quality bases are detected and trimmed by using a sliding window of 4 bases and trimming bases from both ends if the mean quality drops below 20. Read pairs with more than 5 'N' bases are dropped. The workflow also enforces a minimum sequence length of 30 bp at this step as well as removal of sequences with complexity below 30. The complexity of a read is calculated as the percentage of bases in the read that are dissimilar to the next base.
+
+Fastq files from the preprocessing step are marked as temporary and removed as soon as they are not required by downstream analysis steps in order to save storage space. MultiQC (v. 1.12) [@ewels2016multiqc] is used to generate a report of the preprocessing step.
+
+## Genome mapping
+
+For the genome mapping track, fastp is run once more to remove duplicates, using the default accuracy value of 3. This is followed by mapping reads to the reference genomes using [bowtie2](https://github.com/BenLangmead/bowtie2) (v. 2.4.5) [@langmead2012fast] with parameters `--seed 42 --very-sensitive`. The output from the mapping step is sorted and filtered using [samtools](https://github.com/samtools/samtools) (v. 1.14) [@danecek2021twelve] to only keep reads mapped to a list of regions matching the targeted genomes, and with a mapping quality of 40 or higher. The filtered reads are then extracted from the bam-file and saved to a fasta file. The fasta file is then subset to 50,000 reads and compared to the original filtered reads to identify potential contamination. For most samples, the subset and original file should have the same number of reads and if they do not this could indicate a contamination.
+Filtered and mapped reads are then used in a blastn (v. 2.13.0+) [@altschul1990basic] search against the NCBI nt database using settings `-evalue 1e-30 -max_target_seqs 200`. The output is then parsed using a custom python script (`workflow/scripts/filter_mapping_blast_results.py`) which outputs the number or reads for each taxa that align to a target genome and have a blast alignment to a fish, cartilagenous fish, mammal or bird. Finally, another custom python script (`workflow/scripts/parse_results_w_size_factor.py`) summarizes the species level counts and outputs both raw counts and normalized counts per million (CPM) for each sample.
+
+## Marker gene mapping and taxonomic assignment
+
+In the marker gene track of the workflow, preprocessed reads are mapped to the specified reference database (fasta-format) using [minimap2](https://github.com/lh3/minimap2) (v. 2.24-r1122) [@li2018minimap2; @li2021new] using the preset for genomic short-read mapping (`-x sr`). The output is filtered in a first pass using [coverm](https://github.com/wwood/CoverM) (v. 0.6.1), keeping only mapped reads with at least 80% nucleotide identity and at least 30 mapped bp to any reference sequence. A second more stringent filtering step is then applied, requiring at least 90% identity and at least 80 mapped bp. This two-step approach is used in order to allow for modfication of the filtering parameters without avoid having to re-run the resource intensive mapping step, while still saving storage space. Reads passing the filtering steps are then passed to [krakenUniq](https://github.com/fbreitwieser/krakenuniq) (v. 1.0.1) [@breitwieser2018krakenuniq] which searches the standard kraken database and outputs only reads **not** matching genomes from Archaea, Bacteria or Human. Kept reads are then assigned a taxonomy using the SINTAX algorithm implemented in [vsearch](https://github.com/torognes/vsearch) (v. 2.21.2) [@rognes2016vsearch] with a fixed seed (`--randseed 15`), a minimum cutoff of 0.8 (`--sintax_cutoff 0.8`) and checking both strands (`--strand both`). This step is run using only 1 thread to avoid non-deterministic behaviour, allowing the results to be reproducible. The database used for the taxonomic assignment can be any fasta file as long as its fasta headers contain taxonomic information for each sequence in the form of a string starting with ";tax=" and followed by a comma-separated list of up to eight taxonomic identifiers. Each taxonomic identifier must start with an indication of the rank by one of the letters d (for domain) k (kingdom), p (phylum), c (class), o (order), f (family), g (genus), or s (species). The letter is followed by a colon (:) and the name of that rank. By default, the workflow generates a SINTAX-ready fasta file with CO1 reference sequences using scripts from the [mkCOInr](https://github.com/meglecz/mkCOInr/) (v. 0.2.0) package [@meglecz2023coinr]. But any fasta file with the correct format can be used.
+
+Finally, the output is parsed using a custom python script (`workflow/scripts/parse_sintax.py`) which outputs the number of reads assigned to each taxon. Additionally, interactive Krona plots of taxa counts are generated using [krona](https://github.com/marbl/Krona) (v. 2.8.1) [@ondov2011interactive].

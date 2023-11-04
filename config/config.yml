@@ -12,7 +12,8 @@ results_dir: "results"
 fastp:
   # the settings parameter here is a catch-all text string that will be passed to fastp
   # this can be used to pass any fastp parameter not specified below
-  settings: ""
+  # here we set the compression level to 9 by default to get the smallest possible output from fastp
+  settings: "-z 9"
   # complexity_threshold is the minimum complexity of a read to be retained
   # the complexity is defined as the percentage of base that is different from its next base (base[i] != base[i+1])
   complexity_threshold : 30
@@ -23,13 +24,13 @@ fastp:
 # supported values are "bowtie2" and "minimap2"
 mappers:
   - "minimap2"
-# mappings_list should point to a comma separated that specifies which marker gene database to use for the COI mapping
-# the file should have the following columns: map_name, reference, ani_cutoff, min_len
-# 'map_name' can be any name you want to give the mapping, 
-# 'reference' is the path to the fasta file for the marker gene database
-# 'ani_cutoff' is the minimum average nucleotide identity to consider a read a match to the database
-# 'min_len' is the minimum length of a read to be considered a match to the database
-mappings_list: "config/mappings.csv"
+
+# min_ani_cutoff is the minimum average nucleotide identity to consider a read a match to any marker gene database used
+# note that 1) this is only used as a first-pass filtering and 2) this parameter is only used by minimap2
+min_ani_cutoff: 80
+# min_align_len is the minimum length of a read to be considered a match to any marker gene database used
+# as for min_anicutoff, this is only used as a first-pass filtering and is only used by minimap2
+min_align_len: 30
 
 # lib_type_to_map specifies which library types to map to the target species genomes 
 # currently only DNA is supported
@@ -54,6 +55,12 @@ mappings:
       # the first is the sequence id, the second is the start of the region, and the third is the end of the region
       # for a genome of length 1000, the line "genome1 0 1000" would include the entire genome
       to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
+      mapq: 30
+  marker_genes:
+    coinr:
+      fasta: "resources/coinr/COInr.sintax.fasta"
+      ani_cutoff: 90
+      min_len: 80
 
 # below are settings for blastn
 blast:
@@ -91,15 +98,6 @@ sintax:
   # at 0.8 80% of the bootstrap support must be at a given rank for it to be reported
   cutoff: 0.8
   # ranks is a list of taxonomic ranks to report
-  ranks: [ "kingdom", "phylum", "class", "order", "family", "genus", "species" ]
-  # replace_ranks is a list of taxonomic ranks to replace with other ranks
-  # use this if there are ranks in the database that you want to rename in the final output
-  replace_ranks: [ "kingdom=kingdom", "phylum=phylum", "class=class", "order=order", "family=family", "genus=genus", "species=species"]
+  ranks: ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
   # db should point to the path to the fasta file for the COI database
   db: "resources/coinr/COInr.sintax.fasta"
-
-# below are settings for building the coinr database
-coinr:
-  # dbname is the name of the database to create
-  # a database will be built under "resources/coinr/{dbname}.sintax.fasta"
-  dbname: "COInr"

@@ -1,41 +1,111 @@
-# configuration file for project
+# sample_list is a comma separated sample list for the project
+# the first column should contain unique ids or names for each sample but the actual column name can be anything 
+# there should also be columns named 'fwd' (or 'fwd_libs') and 'rev' (or 'rev_libs')
+# specifying the path to fastq files for the forward and reverse reads, respectively.
+# one column should also be named 'type' (or 'lib_type') specifying whether the sample is 
+# from DNA or RNA sequencing.
 sample_list : "samples.csv"
+# results_dir sets the main directory for all results
 results_dir: "results"
+
+# below are settings for preprocessing reads with fastp
+fastp:
+  # the settings parameter here is a catch-all text string that will be passed to fastp
+  # this can be used to pass any fastp parameter not specified below
+  # here we set the compression level to 9 by default to get the smallest possible output from fastp
+  settings: "-z 9"
+  # complexity_threshold is the minimum complexity of a read to be retained
+  # the complexity is defined as the percentage of base that is different from its next base (base[i] != base[i+1])
+  complexity_threshold : 30
+  # min_length is the minimum length of a read to be retained
+  min_length: 30
+
+# mappers specifies which mapper(s) to use for mapping reads to genomes and to the COI database
+# supported values are "bowtie2" and "minimap2"
 mappers:
   - "minimap2"
-fastp :
-  settings: ""
-  complexity_threshold : 30
-  min_length: 30
-mappings_list : "mappings.csv"
-# Specify library type to map against genomes database
+
+# min_ani_cutoff is the minimum average nucleotide identity to consider a read a match to any marker gene database used
+# note that 1) this is only used as a first-pass filtering and 2) this parameter is only used by minimap2
+min_ani_cutoff: 80
+# min_align_len is the minimum length of a read to be considered a match to any marker gene database used
+# as for min_anicutoff, this is only used as a first-pass filtering and is only used by minimap2
+min_align_len: 30
+
+# lib_type_to_map specifies which library types to map to the target species genomes 
+# currently only DNA is supported
 lib_type_to_map: ["DNA"]
+# below are settings for the genome mapping reference database
 mappings:
   genomes:
-    target_species.subset:
-      fasta: "data/target_species.fasta"
-      taxon_table: "data/taxon_table.csv"
-      to_include: "data/to_include.bed"
+    # the nested definition below specifies the genome databases to map against
+    # the first key ('all_verts_whuman') is the name of the database
+    all_verts_whuman:
+      # 'fasta' specifies the path to the fasta file for the database
+      fasta: "resources/genome_index/all_verts_whuman/all_verts_whuman.fasta"
+      # 'taxon_table' specifies the path to the taxon table for the database
+      # this should be a comma separated file with three columns where:
+      # the first column contains sequence ids
+      # the second column contains species names
+      # the third column contains taxon ids
+      taxon_table: "resources/genome_index/all_verts_whuman/taxon_table.csv"
+      # 'to_include' specifies the path to a bed file specifying which sequences use for filtering the output from the mapping
+      # only reads mapped to sequences and regions in this file will be retained
+      # each line should have three columns where:
+      # the first is the sequence id, the second is the start of the region, and the third is the end of the region
+      # for a genome of length 1000, the line "genome1 0 1000" would include the entire genome
+      to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
+  marker_genes:
+    coinr:
+      fasta: "resources/coinr/COInr.sintax.fasta"
+      ani_cutoff: 90
+      min_len: 80
 
+# below are settings for blastn
 blast:
-  db: "/sw/data/blast_databases/nt"
+  # db should point to the path to the blast database
+  # note that this should be a nucleotide database and that the db path should not include the file extension (e.g. .nhr, .nin, .nsq)
+  db: "resources/blast_databases/nt"
+  # evalue is the maximum evalue to consider a match
   evalue: 1e-30
+  # max_target_seqs is the maximum number of matches to return for each read
   max_target_seqs: 200
 
+# below are settings for krakenuniq
 krakenuniq:
-  db: "resources/krakenuniq"
+  # db should point to a directory containing the krakenuniq database
+  db: "resources/krakendb-2022-06-16-STANDARD"
+  # exclude is a list of taxon ids to exclude from the kraken output
+  # this is used to only output reads NOT matching the taxon ids in this list
   exclude: [2,2157,9604]
 
+# below are settings for bowtie2
 bowtie2:
-  threads: 10
+  # threads is the number of threads to use for mapping
+  threads: 20
 
+# below are settings for minimap2
 minimap2:
-  threads: 10
-  split_nums: 4
+  # threads is the number of threads to use for mapping
+  threads: 20
+  # split_num is the number of target bases (in GB) that minimap2 loads into memory for indexing
+  split_num: 4
 
+# below are settings for SINTAX
 sintax:
-  threads: 1
+  # cutoff sets a minimum level of bootstrap support for the taxonomic ranks to be reported (0-1)
+  # at 0.8 80% of the bootstrap support must be at a given rank for it to be reported
   cutoff: 0.8
-  ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
-  replace_ranks: ["domain=kingdom", "kingdom=phylum", "phylum=class", "class=order", "order=family", "family=genus", "genus=species", "species=bold_id"]
-  db: "data/sintaxdb.fasta"
+  # ranks is a list of taxonomic ranks to report
+  ranks: [ "kingdom", "phylum", "class", "order", "family", "genus", "species" ]
+  # replace_ranks is a list of taxonomic ranks to replace with other ranks
+  # use this if there are ranks in the database that you want to rename in the final output
+  replace_ranks: [ "kingdom=kingdom", "phylum=phylum", "class=class", "order=order", "family=family", "genus=genus", "species=species"]
+  # db should point to the path to the fasta file for the COI database
+  db: "resources/coinr/COInr.sintax.fasta"
+
+# below are settings for building the coinr database
+coinr:
+  # dbname is the name of the database to create
+  # a database will be built under "resources/coinr/{dbname}.sintax.fasta"
+  dbname: "COInr"

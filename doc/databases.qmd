@@ -1,0 +1,353 @@
+---
+title: Databases for COI
+subtitle: "Report for NBIS P_Snoeijs_Leijonmalm_1901"
+author: "John Sundh"
+date: last-modified
+number-sections: false
+kernel: jupyter
+format:
+    html:
+        toc: true
+        embed-resources: true
+        code-fold: true
+jupyter: 
+  kernelspec: 
+    display_name: Python 3
+    language: python
+    name: conda-env-jupyter-py
+bibliography: bibliography.bib
+execute: 
+    enable: true
+---
+
+```{python}
+#| tags: [parameters]
+coinr_res = "../results/mappings/counts/sintax.coinr.minimap2.tsv"
+coidb_res = "../results/mappings/counts/sintax.coidb.extra.minimap2.tsv"
+```
+
+# Overview
+
+Two reference databases were used for the COI marker gene in this project. 
+
+One was built using the [coidb](https://github.com/biodiversitydata-se/coidb) tool which pulls sequences from the [BOLD database](http://www.boldsystems.org/) and is centered around BOLD_ids. Several steps are employed to clean up the data and harmonize the taxonomic assignments.
+
+The other database was built using the [mkCOInr](https://github.com/meglecz/mkCOInr/) tool [@meglecz2023coinr] which uses sequences both from BOLD and from the NCBI nr database. Because the taxonomy in these sources differ the tool tries to create a coherent, custom, taxonomy.
+
+# Methods
+
+The coidb reference database was created on 2022-12-16 and supplemented with 5 reference sequences for species of interest that were missing from the default coidb database.
+
+- NC_015244: _Mallotus villosus_
+- HM106491: _Mallotus villosus_
+- MW478834: _Rossia macrosoma_
+- MW478835: _Rossia\_X_
+- NC_065642: _Rossia macrosoma_
+
+The coidb database contained 2,126,457 sequences.
+
+The coinr database was created on 2023-03-08 and contained 1,532,228 sequences.
+
+The workflow was using the coidb database with 922 samples, and for the coinr database with 85 samples. A comparison was then made on the 85 sample intersection from these runs.
+
+```{python}
+import pandas as pd
+import tqdm
+import seaborn as sns
+import matplotlib.pyplot as plt
+import altair as alt
+import altair_viewer
+#alt.renderers.enable('altair_viewer', inline=True)
+%matplotlib inline
+%config InlineBackend.figure_formats = ['svg','pdf']
+sns.set_style("whitegrid")
+
+def clean_taxa(dataframe):
+    """
+    Clean up taxonomic assignments to remove taxid suffix
+
+    Example:
+
+    Calanus_6836 -> Calanus
+
+    """
+    df = dataframe.copy()
+    ranks = list(df.columns[df.dtypes==object])
+    for rank in ranks:
+        df[rank] = df[rank].str.replace("([A-Z][a-z]+)_[0-9]+.+","\\1", regex=True)
+    return df
+
+def clean_species(df):
+    """
+    Specifically clean species names from coinr
+    """
+    cleaned = []
+    for sp in df.species:
+        splits = sp.split("_")
+        species = sp
+        if len(splits) > 1:
+            species = " ".join(splits[0:-1])
+        cleaned.append(species)
+    return cleaned
+
+def normalize_dataframe(df):
+    """
+    Normalize counts to percentages
+    """
+    samples = df.columns[df.dtypes==float]
+    ranks = df.columns[df.dtypes==object]
+    norm = pd.merge(df.loc[:, ranks], 
+         df.loc[:, samples].div(df.loc[:, samples].sum())*100, 
+         left_index=True, right_index=True)
+    return norm
+
+ranks = ["kingdom","phylum","class","order","family","genus","species"]
+
+target_species = [
+    "Calanus glacialis",
+    "Fritillaria crassifolia",
+    "Sagitta elegans",
+    "Paraeuchaeta glacialis",
+    "Metridia longa",
+    "Metridia pacifica",
+    "Calanus hyperboreus",
+    "Cyclocaris guilelmi",
+    "Eusirus holmii",
+    "Eusirus cuspidatus",
+    "Lanceola clausii",
+    "Themisto abyssorum",
+    "Themisto libellula",
+    "Hymenodora glacialis",
+    "Meganyctiphanes norvegica",
+    "Dimophyes arctica",
+    "Marrus orthocanna",
+    "Rudjakovia plicata",
+    "Botrynema ellinorae",
+    "Clione limacina",
+    "Bathypolypus arcticus",
+    "Bathypolypus bairdii",
+    "Bathypolypus pugniger",
+    "Cirroteuthis muelleri",
+    "Gonatus fabricii",
+    "Rossia glaucopis",
+    "Rossia moelleri",
+    "Rossia palpebrosa",
+    "Arctozenus risso",
+    "Clupea harengus",
+    "Arctogadus glacialis",
+    "Boreogadus saida",
+    "Gadus chalcogrammus ",
+    "Gadus macrocephalus",
+    "Gadus morhua",
+    "Melanogrammus aeglefinus",
+    "Benthosema glaciale",
+    "Lampanyctus macdonaldi",
+    "Mallotus villosus",
+    "Artediellus atlanticus",
+    "Careproctus reinhardti",
+    "Cottunculus microps",
+    "Liparis fabricii",
+    "Paraliparis bathybius",
+    "Rhodichthys regina",
+    "Sebastes mentella",
+    "Anisarchus medius ",
+    "Lycodes adolfi",
+    "Lycodes frigidus",
+    "Lycodes polaris",
+    "Lycodes sagittarius",
+    "Lycodes seminudus ",
+    "Hippoglossoides robustus",
+    "Pleuronectes quadrituberculatus",
+    "Reinhardtius hippoglossoides",
+    "Amblyraja hyperborea",
+    "Amblyraja radiata",
+    "Bathyraja spinicauda",
+    "Rajella fyllae",
+    "Somniosus microcephalus",
+    "Aethia pusilla",
+    "Alle alle",
+    "Cepphus grylle",
+    "Uria lomvia",
+    "Larus hyperboreus",
+    "Pagophila eburnea",
+    "Rhodostethia rosea",
+    "Rissa tridactyla",
+    "Xema sabini",
+    "Fulmarus glacialis ",
+    "Cystophora cristata",
+    "Erignathus barbatus",
+    "Histriophoca fasciata",
+    "Odobenus rosmarus",
+    "Pagophilus groenlandicus",
+    "Phoca largha",
+    "Pusa hispida",
+    "Ursus maritimus",
+    "Balaena mysticetus",
+    "Balaenoptera acutorostrata",
+    "Balaenoptera musculus",
+    "Balaenoptera physalus",
+    "Delphinapterus leucas",
+    "Eschrichtius robustus",
+    "Megaptera novaeangliae",
+    "Monodon monoceros",
+    "Orcinus orca",
+]
+target_species_coinr = [x.replace(" ", "_") for x in target_species]
+
+coinr = pd.read_csv(coinr_res, sep="\t")
+# Remove archaea, bacteria and human assignments
+coinr_cleaned = clean_taxa(coinr)
+coinr_cleaned["species"] = clean_species(coinr_cleaned)
+coinr_cleaned = coinr_cleaned.loc[(~coinr_cleaned.kingdom.isin(["Archaea","Bacteria"]))&(coinr_cleaned.genus!="Homo")]
+coinr_cleaned_norm = normalize_dataframe(coinr_cleaned)
+
+coidb = pd.read_csv(coidb_res, sep="\t")
+coidb_cleaned = coidb.loc[~(coidb.kingdom.isin(["Archaea","Bacteria"]))&(coidb.genus!="Homo")]
+coidb_norm = normalize_dataframe(coidb_cleaned)
+
+samples1 = coinr_cleaned_norm.columns[coinr_cleaned_norm.dtypes==float]
+samples2 = coidb_norm.columns[coidb_norm.dtypes==float]
+common_samples = list(set(samples1).intersection(samples2))
+ranks1= list(coinr_cleaned_norm.columns[coinr_cleaned_norm.dtypes==object])
+ranks2 = list(coidb_norm.columns[coidb_norm.dtypes==object])
+common_ranks = list(set(ranks1).intersection(ranks2))
+coinr_common = coinr_cleaned.loc[:, common_ranks+common_samples]
+coidb_common = coidb.loc[:, common_ranks+common_samples]
+coinr_common_norm = coinr_cleaned_norm.loc[:, common_ranks+common_samples]
+coidb_common_norm = coidb_norm.loc[:, common_ranks+common_samples]
+```
+
+# Results
+
+## Unique taxonomic assignments
+
+First of all, how many unique taxonomic assignments were there for the two references?
+
+```{python}
+#| label: tbl-assigned
+#| tbl-cap: Assigned sequences by database and rank
+#| tbl-cap-location: margin
+import re
+assignments = {"coidb": {}, "coinr": {}}
+
+def count_at_rank(df, rank):
+    unresolved_pattern = r"_X+$"
+    classified = 0
+    unresolved = 0
+    unclassified = 0
+    for x in df[rank]:
+        if x.startswith("Unclassified."):
+            unclassified += 1
+        elif re.search(unresolved_pattern, x):
+            unresolved += 1
+        else:
+            classified += 1
+    return {"classified": classified, "unresolved": unresolved, "unclassified": unclassified}
+
+for rank in ranks:
+    assignments["coidb"][rank] = count_at_rank(coidb_common, rank)
+    assignments["coinr"][rank] = count_at_rank(coinr_common, rank)
+coidb_assignments = pd.DataFrame(assignments["coidb"]).T
+coidb_assignments["database"] = ["COIDB"]*len(coidb_assignments)
+coinr_assignments = pd.DataFrame(assignments["coinr"]).T
+coinr_assignments["database"] = ["COINR"]*len(coinr_assignments)
+assignment_df = pd.concat([coinr_assignments.reset_index(), coidb_assignments.reset_index()])
+assignment_df.rename(columns={"index": "rank"}, inplace=True)
+assignment_df = assignment_df.groupby(["database", "rank"], sort=False).sum()
+assignment_df
+```
+
+In the table above, 'unresolved' means that the assigned reference sequence has an unresolved taxonomic label at the specified rank, _e.g._ _Rossia\_X_ at the genus level. The 'unclassified' category means that sintax could not assign a taxonomic label at the specified rank. This means that 'unresolved' comes from issues inherent to the reference database, while 'unclassified' comes from issues with the query sequences and/or the taxonomic assignment tool.
+
+From the table we can see that using the `coinr` database, more sequences were assigned to a resolved taxonomy at all ranks.
+
+## Total number of assigned reads per database
+
+Next we check how many total counts were assigned for each sample and database combination.
+
+```{python}
+common_sum = pd.merge(
+    pd.DataFrame(coinr_common.sum(numeric_only=True), columns=["COINR"]),
+    pd.DataFrame(coidb_common.sum(numeric_only=True), columns=["COIDB"]),
+    left_index=True, right_index=True)
+x = pd.melt(common_sum.reset_index().rename(columns={"index": "sample"}),
+    id_vars=["sample"], value_vars=["COINR", "COIDB"], var_name="database", value_name="counts")
+```
+
+```{python}
+#| label: fig-totalsum
+#| fig-cap: Total read counts per database
+chart = alt.Chart(x).mark_point().encode(
+    x=alt.X("database:N"),
+    y=alt.Y("counts:Q"),
+    color="database",
+    xOffset="jitter:Q",
+    tooltip=["sample", "database", "counts"]
+).transform_calculate(
+    # Generate Gaussian jitter with a Box-Muller transform
+    jitter="sqrt(-2*log(random()))*cos(2*PI*random())"
+).properties(
+    width=300,
+    height=300
+)
+chart
+```
+
+## Sum of target taxa identified
+
+Let's also take a look at the total sum of reads identified for the target species, for each sample and database. This comparison is done both at the genus and species level.
+
+```{python}
+target_genera_sum = {}
+target_genera_sum["coidb"] = coidb_common.loc[coidb_common.genus.isin([x.split(" ")[0] for x in target_species])].sum(numeric_only=True)
+target_genera_sum["coinr"] = coinr_common.loc[coinr_common.genus.isin([x.split(" ")[0] for x in target_species])].sum(numeric_only=True)
+target_genera_sum = pd.DataFrame(target_genera_sum)
+target_genera_sum = pd.melt(target_genera_sum.reset_index(), id_vars=["index"], var_name="database", value_name="counts")
+target_genera_sum = target_genera_sum.assign(rank=["genus"]*len(target_genera_sum))
+
+target_species_sum = {}
+target_species_sum["coidb"] = coidb_common.loc[coidb_common.species.isin(target_species)].sum(numeric_only=True)
+target_species_sum["coinr"] = coinr_common.loc[coinr_common.species.isin(target_species)].sum(numeric_only=True)
+target_species_sum = pd.DataFrame(target_species_sum)
+target_species_sum = pd.melt(target_species_sum.reset_index(), id_vars=["index"], var_name="database", value_name="counts")
+target_species_sum = target_species_sum.assign(rank=["species"]*len(target_species_sum))
+target_taxa_sum = pd.concat([target_genera_sum, target_species_sum])
+```
+
+::: {.panel-tabset}
+
+### Strip plot
+
+```{python}
+#| label: fig-totalsum-target-taxa-strp
+#| fig-cap: Strip plot of total read counts per database for target taxa
+chart = alt.Chart(target_taxa_sum).mark_point().encode(
+    x = alt.X("database:N"), column="rank", y=alt.Y("counts:Q"), color="database", tooltip=["index", "database", "counts"], xOffset="jitter:Q",
+).transform_calculate(
+    # Generate Gaussian jitter with a Box-Muller transform
+    jitter="sqrt(-2*log(random()))*cos(2*PI*random())"
+).properties(
+    width=300,
+    height=300
+)
+chart
+```
+
+### Box-plot
+
+```{python}
+#| label: fig-totalsum-target-taxa-box
+#| fig-cap: Box plot of total read counts per database for target taxa
+chart = alt.Chart(target_taxa_sum).mark_boxplot().encode(
+    x = alt.X("database:N"), column="rank", y=alt.Y("counts:Q"), color="database", tooltip=["index", "database", "counts"],
+).properties(
+    width=300,
+    height=300
+)
+chart
+```
+:::
+
+# Conclusions
+
+The coinr database seems to be a better choice for this project. It has more sequences assigned to a resolved taxonomy at all ranks, and it also identifies more reads for the target taxa.

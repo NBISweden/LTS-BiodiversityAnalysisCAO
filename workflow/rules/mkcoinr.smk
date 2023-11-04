@@ -23,8 +23,8 @@ rule download_coinr_src:
         "logs/coinr/download_coinr_src.log",
     retries: 2
     params:
-        format_db_url="https://raw.githubusercontent.com/meglecz/mkCOInr/main/scripts/format_db.pl",
-        mkdb_url="https://raw.githubusercontent.com/meglecz/mkCOInr/main/scripts/mkdb.pm",
+        format_db_url="https://raw.githubusercontent.com/meglecz/mkCOInr/v.0.2.0/scripts/format_db.pl",
+        mkdb_url="https://raw.githubusercontent.com/meglecz/mkCOInr/v.0.2.0/scripts/mkdb.pm",
     shell:
         """
         exec &>{log}
@@ -55,7 +55,7 @@ rule extract_coinr:
     input:
         rules.download_coinr.output.tar,
     output:
-        tsv="resources/coinr/COInr.tsv.gz",
+        tsv=temp("resources/coinr/COInr.tsv.gz"),
         tax="resources/coinr/taxonomy.tsv.gz",
     log:
         "logs/coinr/extract.log",
@@ -74,20 +74,19 @@ rule extract_coinr:
 
 rule format_coinr:
     output:
-        fas="resources/coinr/{name}.qiime.fasta.gz",
-        tax="resources/coinr/{name}.taxonomy.tsv.gz",
+        "resources/coinr/COInr.full.tsv.gz",
     input:
         tsv=rules.extract_coinr.output.tsv,
         tax=rules.extract_coinr.output.tax,
         format_db=rules.download_coinr_src.output.format_db,
         mkdb=rules.download_coinr_src.output.mkdb,
     log:
-        "logs/coinr/format_coinr_{name}.log",
+        "logs/coinr/format_coinr.log",
     params:
-        outdir=lambda wildcards, output: os.path.dirname(output.fas),
+        outdir=lambda wildcards, output: os.path.dirname(output[0]),
         tmpdir="$TMPDIR/format_coinr",
-        out=lambda wildcards, output: os.path.basename(output.fas),
-        name="{name}",
+        out=lambda wildcards, output: os.path.basename(output[0]),
+        name="COInr.full",
     shell:
         """
         mkdir -p {params.tmpdir}
@@ -95,33 +94,28 @@ rule format_coinr:
         gunzip -c {input.tsv} > {params.tmpdir}/seqs.tsv
         perl {input.format_db} -tsv {params.tmpdir}/seqs.tsv \
             -taxonomy {params.tmpdir}/tax.tsv -outdir {params.tmpdir} \
-            -out {params.name} -outfmt qiime > {log} 2>&1
-        gzip {params.tmpdir}/{params.name}_trainseq.fasta 
-        mv {params.tmpdir}/{params.name}_trainseq.fasta.gz {output.fas}
-        cat {params.tmpdir}/{params.name}_taxon.txt | tr ' ' '\t' | gzip -c > {params.tmpdir}/tax.tsv.gz 
-        mv {params.tmpdir}/tax.tsv.gz {output.tax}
+            -out {params.name} -outfmt full > {log} 2>&1
+        gzip {params.tmpdir}/{params.name}.tsv
+        mv {params.tmpdir}/{params.name}.tsv.gz {output[0]}
         rm -rf {params.tmpdir}
         """
 
 
 rule coinr2sintax:
     output:
-        fas="resources/coinr/{name}.sintax.fasta",
+        "resources/coinr/COInr.sintax.fasta",
     input:
-        fas=rules.format_coinr.output.fas,
-        tax=rules.format_coinr.output.tax,
+        rules.format_coinr.output[0],
     log:
-        "logs/coinr/coinr2sintax.{name}.log",
+        "logs/coinr/coinr2sintax.log",
     params:
         tmpdir="$TMPDIR/coinr2sintax",
+        fasta="$TMPDIR/coinr2sintax/COInr.sintax.fasta",
+        ranks=config["sintax"]["ranks"],
         src=srcdir("../scripts/coinr2sintax.py"),
     shell:
         """
         mkdir -p {params.tmpdir}
-        gunzip -c {input.fas} > {params.tmpdir}/seqs.fasta
-        gunzip -c {input.tax} > {params.tmpdir}/taxa.tsv
-        python {params.src} {params.tmpdir}/seqs.fasta \
-            {params.tmpdir}/taxa.tsv > {params.tmpdir}/sintax.fasta 2>{log} 
-        mv {params.tmpdir}/sintax.fasta {output.fas}
-        rm -rf {params.tmpdir}
+        python {params.src} {input[0]} {params.fasta} --ranks {params.ranks} > {log} 2>&1
+        mv {params.fasta} {output[0]}
         """
