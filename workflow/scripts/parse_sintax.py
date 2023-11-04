@@ -39,16 +39,6 @@ def compair(lineage1, lineage2, conf1, conf2, ranks):
             return lineage2, conf2, len(matching)
 
 
-def replace_ranks(dataf, replacements):
-    d = {}
-    new_ranks = []
-    for item in replacements:
-        key, value = item.split("=")
-        new_ranks.append(value)
-        d[key] = value
-    return dataf.rename(columns=d), new_ranks
-
-
 def write_krona(dataf, ranks, outfile):
     if dataf.shape[0] == 0:
         sys.stderr.write("No results\n")
@@ -74,8 +64,7 @@ def main(args):
         "s": "species",
     }
     if not args.ranks:
-        ranks = ["domain", "kingdom", "phylum", "class", "order",
-                 "family", "genus", "species"]
+        ranks = ["kingdom", "phylum", "class", "order","family", "genus", "species"]
     else:
         ranks = args.ranks
     taxdict = {}
@@ -112,11 +101,8 @@ def main(args):
             confdict[seqid] = float(conf)
             taxdict[seqid] = lineage
     dataf = pd.DataFrame(taxdict).T
-    dataf, new_ranks = replace_ranks(dataf, args.replace_ranks)
     dataf.to_csv(sys.stdout, sep="\t")
     if args.krona:
-        if len(new_ranks) > 0:
-            ranks = new_ranks
         write_krona(dataf, ranks, args.krona)
 
 
@@ -136,7 +122,5 @@ if __name__ == "__main__":
         "-r", "--ranks", nargs="*",
         help="Ranks used in the SINTAX database"
     )
-    parser.add_argument("--replace_ranks", nargs="*",
-                        help="Replace rank names in final output (<rank>=<newrank>)")
     args = parser.parse_args()
     main(args)

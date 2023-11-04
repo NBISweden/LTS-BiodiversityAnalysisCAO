@@ -1,4 +1,0 @@
-{
-    "SBATCH_DEFAULTS": "account=snic2022-22-722 no-requeue exclusive",
-    "CLUSTER_NAME": "",
-}

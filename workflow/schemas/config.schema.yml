@@ -13,16 +13,12 @@ properties:
     type: string
     description: "list of samples with fastq paths"
     default: "config/samples.csv"
-  mappings_list:
-    type: string
-    description: "list of references and map params"
-    default: "config/mappings.csv"
   lib_type_to_map:
     type: array
     description: "What library type should be mapped to genomes"
     default: ["DNA"]
     items:
-      enum: ["DNA", "RNA"]
+      enum: ["DNA"]
   min_ani_cutoff:
     type: integer
     description: "minimum ANI cutoff to use in first read filtering"
@@ -41,6 +37,43 @@ properties:
   mappings:
     type: object
     description: "Mapping parameters including reference path and taxa table"
+    properties:
+      genomes:
+        type: object
+        description: "Genome mapping parameters"
+        additionalProperties:
+          type: object
+          properties:
+            fasta:
+              type: string
+              description: "Path to fasta file for genome database"
+            taxon_table:
+              type: string
+              description: "Path to taxon table for genome database"
+            to_include:
+              type: string
+              description: "Path to bed file for filtering genome database"
+            mapq:
+              type: integer
+              description: "Minimum MAPQ to use in first read filtering"
+              default: 30
+      marker_genes:
+        type: object
+        description: "Marker gene mapping parameters"
+        additionalProperties:
+          type: object
+          properties:
+            fasta:
+              type: string
+              description: "Path to fasta file for marker gene database"
+            ani_cutoff:
+              type: integer
+              description: "Minimum ANI cutoff to use in first read filtering"
+              default: 90
+            min_len:
+              type: integer
+              description: "Minimum aligned length to use in first read filtering"
+              default: 80
   krakenuniq:
     type: object
     default:
@@ -82,17 +115,22 @@ properties:
   fastp:
     type: object
     default:
-      settings: ""
+      settings: "-z 9"
       complexity_threshold: 30
+      min_length: 30
     properties:
       settings:
         type: string
-        default: ""
+        default: "-z 9"
         description: "Extra settings to pass to fastp"
       complexity_threshold:
         type: integer
         default: 30
         description: "complexity threshold for fastp"
+      min_length:
+        type: integer
+        default: 30
+        description: "Minimum read length in fastp QC"
   bowtie2:
     type: object
     default:
@@ -121,7 +159,7 @@ properties:
     type: object
     default:
       cutoff: 0.8
-      ranks: ["domain", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
+      ranks: ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
       replace_ranks: []
     properties:
       cutoff:
@@ -152,4 +190,3 @@ properties:
 
 required:
   - sample_list
-  - mappings_list

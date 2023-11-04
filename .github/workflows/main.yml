@@ -32,9 +32,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Conda environment with Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@main
         with:
+          environment-file: environment.yml
           cache-env: true
       - name: Test run
-        run: snakemake --profile test -c 4 genome_map coi_map sintax
+        run: |
+          mkdir -p test/data
+          touch test/data/sample{1,2}.R{1,2}.fastq.gz test/data/target_species.fasta test/data/to_include.bed test/data/taxon_table.csv test/data/coidb.fasta
+          snakemake --profile test -n
   

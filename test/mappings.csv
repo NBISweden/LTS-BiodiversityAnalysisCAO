@@ -1,2 +1,2 @@
 map_name,reference,ani_cutoff,min_len
-test_mapping,data/coidb.subset.fasta,95,80
+test_mapping,data/coidb.fasta,95,80
