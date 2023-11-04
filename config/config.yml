@@ -55,6 +55,7 @@ mappings:
       # the first is the sequence id, the second is the start of the region, and the third is the end of the region
       # for a genome of length 1000, the line "genome1 0 1000" would include the entire genome
       to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
+      mapq: 30
   marker_genes:
     coinr:
       fasta: "resources/coinr/COInr.sintax.fasta"

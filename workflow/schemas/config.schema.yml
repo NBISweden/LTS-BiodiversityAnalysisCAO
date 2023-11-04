@@ -53,6 +53,10 @@ properties:
             to_include:
               type: string
               description: "Path to bed file for filtering genome database"
+            mapq:
+              type: integer
+              description: "Minimum MAPQ to use in first read filtering"
+              default: 30
       marker_genes:
         type: object
         description: "Marker gene mapping parameters"

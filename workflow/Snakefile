@@ -322,6 +322,7 @@ rule filter_bam:
         "samtools/1.14",
     params:
         tmpdir="$TMPDIR/{ref}.{sample}",
+        mapq=config["mappings"]["genomes"][wildcards.ref]["mapq"],
     resources:
         runtime=120,
         mem_mb=mem_allowed,
@@ -329,8 +330,8 @@ rule filter_bam:
         """
         exec &>{log}
         mkdir -p {params.tmpdir}
-        samtools view -b -L {input.keep} -h -q 40 -f 0x2 -o {params.tmpdir}/tmp.bam {input.bam}
-        samtools view -L {input.keep} -q 40 -f 0x2 -o {params.tmpdir}/tmp.sam {input.bam}
+        samtools view -b -L {input.keep} -h -q {params.mapq} -f 0x2 -o {params.tmpdir}/tmp.bam {input.bam}
+        samtools view -L {input.keep} -q {params.mapq} -f 0x2 -o {params.tmpdir}/tmp.sam {input.bam}
         mv {params.tmpdir}/tmp.bam {output.bam}
         mv {params.tmpdir}/tmp.sam {output.sam}
         rm -rf {params.tmpdir}
