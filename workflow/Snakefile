@@ -322,7 +322,7 @@ rule filter_bam:
         "samtools/1.14",
     params:
         tmpdir="$TMPDIR/{ref}.{sample}",
-        mapq=config["mappings"]["genomes"][wildcards.ref]["mapq"],
+        mapq=lambda wildcards: config["mappings"]["genomes"][wildcards.ref]["mapq"],
     resources:
         runtime=120,
         mem_mb=mem_allowed,
