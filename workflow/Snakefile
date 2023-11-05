@@ -911,7 +911,7 @@ rule run_sintax:
         cutoff=config["sintax"]["cutoff"],
         out="$TMPDIR/{map_name}.{mapper}.{sample}/{sample}.sintax.tsv",
     resources:
-        runtime=60 * 48,
+        runtime=60 * 24 * 10,
         mem_mb=mem_allowed,
     conda:
         "envs/sintax.yml"
