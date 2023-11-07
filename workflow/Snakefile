@@ -121,7 +121,7 @@ rule fastp:
         complexity_threshold=config["fastp"]["complexity_threshold"],
         min_length=config["fastp"]["min_length"],
         settings=config["fastp"]["settings"],
-    group: group1
+    group: "group1"
     shell:
         """
         exec &>{log.shell}
@@ -162,7 +162,7 @@ rule fastp_dedup:
     resources:
         runtime=60 * 3,
         mem_mb=mem_allowed,
-    group: group1
+    group: "group1"
     shell:
         """
         exec &>{log.shell}
@@ -292,7 +292,7 @@ rule bowtie2_map_genome:
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
-    group: group1
+    group: "group1"
     shell:
         """
         exec &>{log.log}
@@ -735,7 +735,7 @@ rule minimap2:
     resources:
         runtime=60 * 10,
         mem_mb=mem_allowed,
-    group: group1
+    group: "group1"
     shell:
         """
         exec &>{log.log}
