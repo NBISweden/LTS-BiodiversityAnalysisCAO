@@ -121,6 +121,8 @@ rule fastp:
         complexity_threshold=config["fastp"]["complexity_threshold"],
         min_length=config["fastp"]["min_length"],
         settings=config["fastp"]["settings"],
+    group: "group1"
+    priority: 25
     shell:
         """
         exec &>{log.shell}
@@ -161,6 +163,8 @@ rule fastp_dedup:
     resources:
         runtime=60 * 3,
         mem_mb=mem_allowed,
+    group: "group1"
+    priority: 25
     shell:
         """
         exec &>{log.shell}
@@ -283,6 +287,7 @@ rule bowtie2_map_genome:
         "bioinfo-tools",
         "bowtie2/2.4.5",
         "samtools/1.14",
+    priority: 50
     resources:
         runtime=60 * 24 * 2,
         mem_mb=16*16000,
@@ -290,6 +295,7 @@ rule bowtie2_map_genome:
     container:
         "https://depot.galaxyproject.org/singularity/bowtie2:2.4.5--py39hd2f7db1_3"
     threads: 20
+    group: "group1"
     shell:
         """
         exec &>{log.log}
@@ -326,6 +332,7 @@ rule filter_bam:
     resources:
         runtime=120,
         mem_mb=mem_allowed,
+    priority: 100
     shell:
         """
         exec &>{log}
@@ -649,6 +656,7 @@ rule bowtie2:
     resources:
         runtime=24 * 60,
         mem_mb=mem_allowed,
+    priority: 50
     shell:
         """
         exec &>{log.log}
@@ -707,7 +715,7 @@ rule minimap2:
     Maps preprocessed reads against the minimap2 index
     """
     output:
-        bam="{results_dir}/mappings/{map_name}/minimap2/{sample}.filtered.bam",
+        bam=temp("{results_dir}/mappings/{map_name}/minimap2/{sample}.filtered.bam"),
     input:
         R1=rules.fastp.output.R1,
         R2=rules.fastp.output.R2,
@@ -732,6 +740,8 @@ rule minimap2:
     resources:
         runtime=60 * 10,
         mem_mb=mem_allowed,
+    priority: 50
+    group: "group1"
     shell:
         """
         exec &>{log.log}
@@ -837,6 +847,7 @@ rule extract_reads:
         runtime=12 * 60,
         mem_mb=mem_allowed,
     threads: 4
+    priority: 100
     shell:
         """
         exec &> {log}
