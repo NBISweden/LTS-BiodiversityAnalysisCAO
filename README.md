@@ -153,8 +153,8 @@ mappings:
 The `fasta` and `taxon_table` parameters specify paths to the fasta file and
 seqid->taxid mapfile, respectively. The `taxon_table` file should be a
 comma-separated file with sequence ids (matching the id in the fasta file
-header) in the first column, species name in the second column and taxonomy ids
-in the third column. Examples of the two file contents are shown below:
+header) in the first column, species name in the second column, species taxon id
+in the third column and family taxon id in the fourth column. Examples of the two file contents are shown below:
 
 _fasta_
 ```
@@ -172,8 +172,8 @@ gttattcacacacacattcacacactgatggcagaggctgccatgcaaggtgccaacctgcccat
 
 _taxon\_table_
 ```
-AESE010000001.1,Leucoraja erinacea,7782
-CAKAOH010043426.1,Sebastiscus tertius,1472224
+CM054007.1,Leucoraja erinacea,7782,30475
+CAKAOH010000016.1,Sebastiscus tertius,1472224,274692
 ```
 The `to_include` bed file that includes all of the contigs that are of interest
 for downstream analysis. It could include an entry for all of the sequences in
