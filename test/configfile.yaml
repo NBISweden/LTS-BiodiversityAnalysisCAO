@@ -4,7 +4,7 @@
 # specifying the path to fastq files for the forward and reverse reads, respectively.
 # one column should also be named 'type' (or 'lib_type') specifying whether the sample is 
 # from DNA or RNA sequencing.
-sample_list : "samples.csv"
+sample_list : "test/samples.csv"
 # results_dir sets the main directory for all results
 results_dir: "results"
 
@@ -42,22 +42,22 @@ mappings:
     # the first key ('all_verts_whuman') is the name of the database
     all_verts_whuman:
       # 'fasta' specifies the path to the fasta file for the database
-      fasta: "resources/genome_index/all_verts_whuman/all_verts_whuman.fasta"
+      fasta: "test/resources/genome_index/all_verts_whuman/all_verts_whuman.fasta"
       # 'taxon_table' specifies the path to the taxon table for the database
       # this should be a comma separated file with three columns where:
       # the first column contains sequence ids
       # the second column contains species names
       # the third column contains taxon ids
-      taxon_table: "resources/genome_index/all_verts_whuman/taxon_table.csv"
+      taxon_table: "test/resources/genome_index/all_verts_whuman/taxon_table.csv"
       # 'to_include' specifies the path to a bed file specifying which sequences use for filtering the output from the mapping
       # only reads mapped to sequences and regions in this file will be retained
       # each line should have three columns where:
       # the first is the sequence id, the second is the start of the region, and the third is the end of the region
       # for a genome of length 1000, the line "genome1 0 1000" would include the entire genome
-      to_include: "resources/genome_index/all_verts_whuman/to_include.bed"
+      to_include: "test/resources/genome_index/all_verts_whuman/to_include.bed"
   marker_genes:
     coinr:
-      fasta: "resources/coinr/COInr.sintax.fasta"
+      fasta: "test/resources/coinr/COInr.sintax.fasta"
       ani_cutoff: 90
       min_len: 80
 
@@ -65,7 +65,7 @@ mappings:
 blast:
   # db should point to the path to the blast database
   # note that this should be a nucleotide database and that the db path should not include the file extension (e.g. .nhr, .nin, .nsq)
-  db: "resources/blast_databases/nt"
+  db: "test/resources/blast_databases/nt"
   # evalue is the maximum evalue to consider a match
   evalue: 1e-30
   # max_target_seqs is the maximum number of matches to return for each read
@@ -74,7 +74,7 @@ blast:
 # below are settings for krakenuniq
 krakenuniq:
   # db should point to a directory containing the krakenuniq database
-  db: "resources/krakendb-2022-06-16-STANDARD"
+  db: "test/resources/krakendb-2022-06-16-STANDARD"
   # exclude is a list of taxon ids to exclude from the kraken output
   # this is used to only output reads NOT matching the taxon ids in this list
   exclude: [2,2157,9604]
@@ -102,7 +102,7 @@ sintax:
   # use this if there are ranks in the database that you want to rename in the final output
   replace_ranks: [ "kingdom=kingdom", "phylum=phylum", "class=class", "order=order", "family=family", "genus=genus", "species=species"]
   # db should point to the path to the fasta file for the COI database
-  db: "resources/coinr/COInr.sintax.fasta"
+  db: "test/resources/coinr/COInr.sintax.fasta"
 
 # below are settings for building the coinr database
 coinr:

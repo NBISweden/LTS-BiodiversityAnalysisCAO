@@ -7,4 +7,3 @@ use-conda: True
 conda-frontend: "mamba"
 cores: 1
 default-resource: "tmpdir='/tmp'"
-directory: "test"
