@@ -107,12 +107,10 @@ rule fastp:
     envmodules:
         "bioinfo-tools",
         "fastp/0.23.2",
-    conda:
-        "envs/fastp.yml"
     resources:
         runtime=60 * 3,
         mem_mb=mem_allowed,
-    threads: 10
+    threads: 20
     params:
         tmpR1="$TMPDIR/{sample}.R1.fastq.gz",
         tmpR2="$TMPDIR/{sample}.R2.fastq.gz",
@@ -121,20 +119,10 @@ rule fastp:
         complexity_threshold=config["fastp"]["complexity_threshold"],
         min_length=config["fastp"]["min_length"],
         settings=config["fastp"]["settings"],
+        deup=False,
     group: "marker-map"
     priority: 25
-    shell:
-        """
-        exec &>{log.shell}
-        cat {input.R1} > {params.tmpR1}
-        cat {input.R2} > {params.tmpR2}
-        fastp --thread {threads} -y -Y {params.complexity_threshold} -l {params.min_length} \
-            -i {params.tmpR1} -I {params.tmpR2} -o {params.outR1} \
-            -O {params.outR2} -j {log.json} {params.settings} > {log.log} 2>&1
-        mv {params.outR1} {output.R1}
-        mv {params.outR2} {output.R2}
-        rm {params.tmpR1} {params.tmpR2}
-        """
+    wrapper: "file:workflow/wrappers/fastp"
 
 
 rule fastp_dedup:
@@ -142,8 +130,12 @@ rule fastp_dedup:
         R1=temp("{results_dir}/fastp/{sample}.fastp.dedup.R1.fastq.gz"),
         R2=temp("{results_dir}/fastp/{sample}.fastp.dedup.R2.fastq.gz"),
     input:
-        R1=rules.fastp.output.R1,
-        R2=rules.fastp.output.R2,
+        R1=lambda wildcards: sorted(
+            [x for x in samples[wildcards.sample]["fwd_libs"].split(";")]
+        ),
+        R2=lambda wildcards: sorted(
+            [x for x in samples[wildcards.sample]["rev_libs"].split(";")]
+        ),
     log:
         shell="{results_dir}/logs/fastp/{sample}.fastp.dedup.shell.log",
         log="{results_dir}/logs/fastp/{sample}.fastp.dedup.log",
@@ -154,30 +146,19 @@ rule fastp_dedup:
         outR1="$TMPDIR/{sample}.fastp.R1.fastq.gz",
         outR2="$TMPDIR/{sample}.fastp.R2.fastq.gz",
         complexity_threshold=config["fastp"]["complexity_threshold"],
+        min_length=config["fastp"]["min_length"],
+        settings=config["fastp"]["settings"],
+        dedup=True,
     envmodules:
         "bioinfo-tools",
         "fastp/0.23.2",
-    conda:
-        "envs/fastp.yml"
-    threads: 10
+    threads: 20
     resources:
         runtime=60 * 3,
         mem_mb=mem_allowed,
     group: "genome-map"
     priority: 25
-    shell:
-        """
-        exec &>{log.shell}
-        cat {input.R1} > {params.tmpR1}
-        cat {input.R2} > {params.tmpR2}
-        fastp --thread {threads} -i {params.tmpR1} -I {params.tmpR2} -o {params.outR1} \
-            -O {params.outR2} -j {log.json} --dedup --disable_adapter_trimming \
-            --disable_quality_filtering --disable_trim_poly_g --disable_length_filtering > {log.log} 2>&1
-        mv {params.outR1} {output.R1}
-        mv {params.outR2} {output.R2}
-        rm {params.tmpR1} {params.tmpR2}        
-        """
-
+    wrapper: "file:workflow/wrappers/fastp"
 
 rule multiqc:
     """
