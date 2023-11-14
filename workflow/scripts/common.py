@@ -33,13 +33,13 @@ def all_output(wildcards):
         )
     )
     # mapping statistics report for marker gene databases
-    output.extend(
-        expand(
-            "{results_dir}/mappings/{map_name}/map_qc.html",
-            map_name=config["mappings"]["marker_genes"].keys(),
-            results_dir=config["results_dir"],
-        )
-    )
+    #output.extend(
+    #    expand(
+    #        "{results_dir}/mappings/{map_name}/map_qc.html",
+    #        map_name=config["mappings"]["marker_genes"].keys(),
+    #        results_dir=config["results_dir"],
+    #    )
+    #)
     # sintax parsed output for each sample and marker gene database
     output.extend(
         expand(
